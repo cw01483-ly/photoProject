@@ -68,6 +68,44 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     @Column(nullable = false, length = 100)
     private String email;
 
+    //jwc?
+    //nickname
+    @Setter
+    @Pattern(
+            regexp = "^[A-Za-z0-9가-힣_]+$",
+            message = "닉네임은 한글,영문,숫자,_(언더바)만 사용하여 조합 할 수 있습니다."
+    )
+    @NotBlank(message = "닉네임은 공백일 수 없습니다.")
+    @Column(nullable = false, length = 30)
+    private String nickname; //닉네임
+
+    // 프로필 이미지 관련 메서드(기본 이미지 경로 상수 설정)
+    public static final String  DEFAULT_PROFILE_IMAGE_URL = "/images/default_profile.png";
+
+    //실제 이미지 경로 저장 필드(기본값 포함)
+    @Column(name = "profile_image_url",length = 500,nullable = false)
+    @Builder.Default
+    private String profileImageUrl = DEFAULT_PROFILE_IMAGE_URL;
+
+    //프로필 이미지 교체 메서드
+    public void changeProfileImage(String imageUrl){
+        if(imageUrl==null || imageUrl.isBlank()){
+            throw new IllegalArgumentException("공백일 수 없습니다.");
+        }
+        this.profileImageUrl=imageUrl.trim();
+    }
+
+    //프로필 이미지 제거 메서드, 삭제 시 기본 이미지 적용
+    public void resetProfileImage(){
+        this.profileImageUrl = DEFAULT_PROFILE_IMAGE_URL;
+    }
+
+    //현재 커스텀 이미지 사용 여부 확인
+    public boolean hasCustomProfileImage(){
+        return profileImageUrl != null && !DEFAULT_PROFILE_IMAGE_URL.equals(profileImageUrl);
+    }
+
+
     //권한 설정
     @Enumerated(EnumType.STRING) //Enum 을 문자열로 DB에 저장할것을 JPA에게 알려줌
     //Enum은 한마디로 열거해놓은 선택지. 사용자를 일반사용자or관리자 어떤걸로 만들지
@@ -86,16 +124,6 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     //즉 회원가입 당시에는 모든 회원이 계정활성화 상태임을 선언.
     //추후 관리자계정이 false로 바꾼다면 해당 계정은 비활성화됨
 
-    //jwc?
-    //nickname
-    @Setter
-    @Pattern(
-            regexp = "^[A-Za-z0-9가-힣_]+$",
-            message = "닉네임은 한글,영문,숫자,_(언더바)만 사용하여 조합 할 수 있습니다."
-    )
-    @NotBlank(message = "닉네임은 공백일 수 없습니다.")
-    @Column(nullable = false, length = 30)
-    private String nickname; //닉네임
 
     //마지막 접속 시각
     @Column(name = "last_login_at")
