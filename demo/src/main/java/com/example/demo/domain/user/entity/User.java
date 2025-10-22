@@ -80,7 +80,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     private String nickname; //닉네임
 
     // 프로필 이미지 관련 메서드(기본 이미지 경로 상수 설정)
-    public static final String  DEFAULT_PROFILE_IMAGE_URL = "/images/default_profile.png";
+    public static final String DEFAULT_PROFILE_IMAGE_URL = "/images/default_profile.png";
 
     //실제 이미지 경로 저장 필드(기본값 포함)
     @Column(name = "profile_image_url",length = 500,nullable = false)
