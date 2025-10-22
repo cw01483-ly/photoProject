@@ -1,15 +1,12 @@
-package com.example.demo.domain.user;
+package com.example.demo.domain.user.entity;
 
 import com.example.demo.global.base.BaseTimeEntity;
-import jakarta.persistence.Entity;
 import jakarta.persistence.*;// JPA 엔티티 관련 어노테이션(@Entity, @Id 등)
-import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
-
-import javax.management.relation.Role;
+import com.example.demo.domain.user.role.UserRole;
 import java.time.LocalDateTime;
 
 
@@ -19,7 +16,6 @@ import java.time.LocalDateTime;
  */
 @Entity //엔티티클래스 선언
 @Getter //모든 필드의 getter 자동 생성
-@Setter //모든 필드의 setter 자동 생성
 @NoArgsConstructor(access = AccessLevel.PROTECTED)// JPA가 프록시 생성을 위해 기본 생성자 필요 (protected 권장)
 @AllArgsConstructor //모든 필드를 인자로 받는 생성자 자동 생성
 @Builder //빌더 패턴 사용 가능(User.builder()...)
@@ -52,10 +48,13 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
 
     //password
     @NotBlank(message = "비밀번호는 공백일 수 없습니다.") // 뷰 단계에서 공백 제한
-    @Column(nullable = false, length=100)//비밀번호를 암호화할 경우를 대비에 길이를 여유있게 설정
+    @Column(nullable = false, length=255)
+    //비밀번호를 암호화할 경우를 대비에 길이를 여유있게 설정
+    //비밀번호 조건검사는 Dto에서 작성할 예정,
     private String password;
 
     //e-mail
+    @Setter
     @Email(message = "이메일 형식이 올바르지 않습니다") // 어노테이션을 활용하여 이메일 형식 검증
     @Pattern(
             regexp = "^\\S+$", //어떤 공백 문자도 허용하지 않음
@@ -65,6 +64,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
             // @Email어노테이션을 사용하기에 굳이 한글제한까지 걸 필요는 없음
             message = "이메일에 공백을 포함 할 수 없습니다."
     )
+    @NotBlank(message = "필수 입력 사항입니다.")
     @Column(nullable = false, length = 100)
     private String email;
 
@@ -74,7 +74,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     /*role이라는 컬럼을 DB에 만들고 비워둘 수 없게 만든 후
     Role Enum에 정의된 값 중 하나를 문자열 형태(USER,ADMIN)로 저장하게 만드는것*/
     @Column(nullable = false, length = 20)
-    private Role role; // 엔티티는 구조를 정의하는곳이기에 USER, ADMIN은 서비스 혹은 리퀘스트Dto에서 처리
+    private UserRole role; // 엔티티는 구조를 정의하는곳이기에 USER, ADMIN은 서비스 혹은 리퀘스트Dto에서 처리
 
     //계정활성화, Builder() 사용시에도 기본값 true 유지
     @Column(nullable = false)
@@ -88,6 +88,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
 
     //jwc?
     //nickname
+    @Setter
     @Pattern(
             regexp = "^[A-Za-z0-9가-힣_]+$",
             message = "닉네임은 한글,영문,숫자,_(언더바)만 사용하여 조합 할 수 있습니다."
@@ -97,10 +98,11 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     private String nickname; //닉네임
 
     //마지막 접속 시각
+    @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
     /*추후 추가 예정
-    * 1. @OneToMany(mappedBy = "author", fetch = FetchType.Lazy, cascade = CascadeType.ALL, orphanRemoval = true)
+    * 1. @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     * 2. private List<Post> posts = new ArrayList<>();*/
 
     //              도메인 비지니스 메서드
@@ -111,17 +113,42 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
         if(newEmail != null && !newEmail.isBlank()) this.email=newEmail.trim();
     }
     /*if문이 독립적으로 동작하기 때문에 하나만 혹은 둘 다 변경해도 정상작동
-    * .trip() : String(문자열)에서 불필요한 공백(스페이스,탭,줄바꿈 등) 을 잘라내는 메서드, 단 문자 사이의 공백은 제거안함
+    * .trim() : String(문자열)에서 불필요한 공백(스페이스,탭,줄바꿈 등) 을 잘라내는 메서드, 단 문자 사이의 공백은 제거안함
     * 하지만 메서드 실행시 nickname과 email메서드에서 걸러짐*/
 
-    //비밀번호 변경하기
-    public void changePassword(String encodedPassWord){
-        if(encodedPassWord == null || encodedPassWord.isBlank()){
-            throw new IllegalArgumentException("암호화된 비밀번호가 유효하지 않습니다.");
+    //비밀번호 변경하기 , 검증은 Service에서 수행
+    public void changePasswordEncoded(String encodedPassword){
+        if(encodedPassword == null || encodedPassword.isBlank()){
+            throw new IllegalArgumentException("비밀번호가 유효하지 않습니다.");
         }
-        this.password = encodedPassWord;
+        this.password = encodedPassword;
     }
+    /*public void changePassword(String currentRawPassword,
+                               String newRawPassword,
+                               PasswordEncoder passwordEncoder){
+        *//*currentRawPassword : 사용자가 입력한 기존 평문 비밀번호
+          newRawPassword     : 사용자가 입력한 새 평문 비밀번호
+          passwordEncoder    : BCryptPasswordEncoder 등 스프링 시큐리티 *//*
 
+        //1. 기존 비밀번호 일치하는지 검사
+        if(!passwordEncoder.matches(currentRawPassword,this.password)){
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        //2. 새 비밀번호 형식 검증
+        if(newRawPassword == null || newRawPassword.length()<8){
+            throw new IllegalArgumentException("비밀번호는 8자 이상이어야 합니다.");
+        }
+
+        //3. 기존 비밀번호와 새 비밀번호 동일 여부 검사
+        if(passwordEncoder.matches(newRawPassword,this.password)){
+            throw new IllegalArgumentException("이전과 동일한 비밀번호는 사용할 수 없습니다.");
+        }
+
+        //4. 모든 조건문 통과시 새 비밀번호를 암호화 한 후 저장
+        this.password = passwordEncoder.encode(newRawPassword);
+    }
+*/
     // 로그인 성공 시 마지막 로그인 시각 갱신
     public void markLoginSuccess() {
         this.lastLoginAt = LocalDateTime.now();
