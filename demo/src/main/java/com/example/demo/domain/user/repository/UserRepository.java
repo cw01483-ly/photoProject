@@ -15,6 +15,14 @@ import java.util.Optional;
 */
 public interface UserRepository extends JpaRepository<User, Long> {
 
+
+    /*
+        findByUsername (로그인 검증)
+        - username 컬럼으로 사용자 조회
+        -Optional<User>로 반환하여 값이 없을때 NullPointerException 방지.
+    */
+    Optional<User> findByUsername(String username);
+
     /*
         findByEmail
          - 이메일 주소로 사용자 조회하는 메서드
