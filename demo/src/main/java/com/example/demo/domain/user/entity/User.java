@@ -35,7 +35,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     private Long id; // 고유 ID값
 
     //username (영문+숫자조합, 길이 : 4~20, 숫자로만 작성 불가)
-    @NotBlank(message="사용자명은 필수 입력사항입니다.")// 뷰 단계에서 공백 금지
+    @NotBlank(message="ID는 필수 입력사항입니다.")// 뷰 단계에서 공백 금지
     @Pattern(// @Pattern : 정규표현식(문자 조합 규칙)을 적용하여 검증
             regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{4,20}$",
             //regexp : 정규 표현식(Regular Expression) = 문자규칙
@@ -48,7 +48,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
            [A-Za-z\d]{4,20}  : 영문 또는 숫자로 구성되고 4~20자
            $                 : 문자열 끝
              */
-            message = "사용자명은 영문+숫자 조합만 사용 가능합니다.(특수문자 불가)."
+            message = "ID는 영문+숫자 조합만 사용 가능합니다.(특수문자 불가)."
     )
     @Column(nullable = false, length=20) //DB단계 공백 금지, username수 제한
     private String username; // DB의 속성값
@@ -74,7 +74,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
             message = "닉네임은 한글,영문,숫자,_(언더바)만 사용하여 조합 할 수 있습니다."
     )
     @NotBlank(message = "닉네임은 공백일 수 없습니다.")
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 30, unique = true)
     private String nickname; //닉네임
 
     // 프로필 이미지 관련 메서드(기본 이미지 경로 상수 설정)
@@ -137,6 +137,16 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     /*if문이 독립적으로 동작하기 때문에 하나만 혹은 둘 다 변경해도 정상작동
     * .trim() : String(문자열)에서 불필요한 공백(스페이스,탭,줄바꿈 등) 을 잘라내는 메서드, 단 문자 사이의 공백은 제거안함
     * 하지만 메서드 실행시 nickname과 email메서드에서 걸러짐*/
+
+    /*닉네임만 변경하고 싶을 때의 편의 메서드 (실제로는 updateProfile로 위임)*/
+    public void changeNickname(String newNickname){
+        updateProfile(newNickname,null);
+    }
+
+    /*이메일만 변경하고 싶을 때의 편의 메서드 (실제는 updateProfile로 위임)*/
+    public void changeEmail(String newEmail){
+        updateProfile(null,newEmail);
+    }
 
     //비밀번호 변경하기 , 검증은 Service에서 수행
     public void changePasswordEncoded(String encodedPassword){
