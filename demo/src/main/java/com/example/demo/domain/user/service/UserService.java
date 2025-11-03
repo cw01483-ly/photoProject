@@ -5,6 +5,7 @@ import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class UserService {
         *  - 회원가입 이벤트 발행(알림/이메일 인증)*/
     }
 
+
     // username 중복검사 (DB확인)
     private void validateDuplicateUsername(String username){
         if (username == null || username.isBlank()){ // 기본 유효성 검사
@@ -52,7 +54,8 @@ public class UserService {
         }
     }
 
-    // 관리자,서버 내부 로직이 사용자를 식별할 경우, 권한은 추후 시큐리티에서
+    // 관리자,서버 내부 로직이 사용자를 식별할 경우, 본인 포함
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
     public User getById(Long id){ //PK(id)로 단건조회(Read)
         // 미 존재시 EntityNotFoundException 던지기
         return userRepository.findById(id) // Optional<User> 반환
@@ -63,11 +66,12 @@ public class UserService {
     }
 
     // 전체 조회(Read All), 관리자용
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAll(){ //List타입으로 빈 리스트반환[]이 가능하기에 elseTrow 불필요
         return userRepository.findAll(); //모든 User 목록 반환.
     }
 
-    // username으로 조회(로그인 검증/관리기능 등 에서 사용 예정)
+    // username으로 조회, 게시판 등 다른곳에서 username검색이 사용될 수 있으니 @PreAuthorize(보안)설정X
     public User getByUsername(String username){
         return userRepository.findByUsername(username) //Optional<User>
                 .orElseThrow(()-> new EntityNotFoundException("User not found. username= "+username));
@@ -76,6 +80,7 @@ public class UserService {
 
     //닉네임 변경
     @Transactional // 쓰기 트랜잭션(수정)
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //본인 혹은 관리자만 가능
     public User updateNickname(Long id, String newNickname){ //닉네임 변경 : 유니크 중복검사 후 엔티티 위임
         User user = getById(id); // 존재 확인
 
@@ -97,6 +102,7 @@ public class UserService {
 
     //이메일 변경, 유니크 중복 검사 후 엔티티 위임
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //본인 혹은 관리자만 가능
     public User updateEmail(Long id, String newEmail){
         User user = getById(id); // 대상 사용자 존재 확인
 
@@ -116,6 +122,7 @@ public class UserService {
 
     //삭제
     @Transactional
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //본인 혹은 관리자만
     public void delete(Long id){
         User user = getById(id);//존재 확인
         userRepository.delete(user); // 삭제 실행
@@ -125,4 +132,6 @@ public class UserService {
                 - 운영에서는 '탈퇴 처리(soft delete) 전략도 고려해볼 필요 있을듯.
          */
     }
+
+
 }
