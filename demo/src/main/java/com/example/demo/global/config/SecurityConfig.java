@@ -2,11 +2,14 @@ package com.example.demo.global.config;
 
 /* 스프링 시큐리티 전역 보안 설정 클래스*/
 
+import lombok.Builder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import static org.springframework.security.config.Customizer.withDefaults; // ★ 추가
@@ -38,5 +41,11 @@ public class SecurityConfig {
                 .httpBasic(withDefaults());    // ★ 람다/Customizer 스타일
 
         return http.build();
+    }
+
+    // 비밀번호 해시용 빈 등록(UserService에서 주입받아 사용)
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
     }
 }
