@@ -1,9 +1,13 @@
 package com.example.demo.domain.user.controller;
 
 
+import com.example.demo.domain.user.dto.UserResponseDto;
+import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController // JSON 기반의 REST(Representational State Transfer) 응답을 반환하는 컨트롤러
 /*
@@ -31,27 +36,27 @@ public class UserController {
     /*
     UserController
     - UserService를 호출하여 사용자 관련 HTTP 요청을 처리하는 REST 컨트롤러
-    - 현재는 DTO가 없으므로, 임시로 엔티티(User)를 요청/응답 바디로 사용.
-      추후 DTO(UserSignupRequestDto, UserLoginRequestDto, UserResponseDto) 도입 시 메서드 시그니처를 교체.
+    - 현재 컨트롤러는 DTO(UserSignupRequestDto, UserResponseDto) 기반으로 요청/응답을 처리.
+      (UserLoginRequestDto는 추후 로그인 API에서 사용 예정)
     - 예외(예: EntityNotFoundException, IllegalStateException)는 전역 예외 처리기(@ControllerAdvice) 추가 시 한글 표준 응답으로 변환 예정.
  */
     private final UserService userService; //서비스 계층 의존성(비지니스 로직 호출하기)
     // HTTP POST요청 처리, 사용자 등록
-    @PostMapping
-    public ResponseEntity<User> register(@Valid @RequestBody User request){
+    @PostMapping //HTTP POST요청 처리, 사용자 등록
+    public ResponseEntity<UserResponseDto> register(@Valid @RequestBody UserSignupRequestDto request){
         //Valid : 유효성검사
-        /*ResponseEntity : 스프링MCV의 응답용 클래스(SpringFramework)
+        /*ResponseEntity : 스프링MVC의 응답용 클래스(SpringFramework)
             서버가 클라이언트에게 보낼 HTTP응답(상태,본문,헤더)을 직접 제어함
         */
-        //@RequestBody User request : 사용자가 회원가입폼에서 입력한 정보가 JSON형태로 서버에 오면 User객체로 자동변경
-        /*ResponseEntity<User> : HTTP 상태코드/헤더/바디 를 직접 구현 후 반환. 바디타입은 User
-        * 서버가 보내는 응답을 직접 구성하는 객체(어떤 상태로 어떤 내용을 보낼지 직접 설정)*/
+        //@RequestBody UserSignupRequestDto request : 회원가입 요청 DTO로 받음(입력 검증/보안)
+        /*ResponseEntity : HTTP 상태코드/헤더/바디 를 직접 구현 후 반환.
+        서버가 보내는 응답을 직접 구성하는 객체(어떤 상태로 어떤 내용을 보낼지 직접 설정)*/
         User saved = userService.register(request); //회원등록 (비즈니스 로직 실행)
 
         URI location = URI.create("/api/users/"+saved.getId());
         //새로 등록된 사용자의 PK를 꺼내서 고유주소(URI : Uniform Resource Identifier)를 만들기
-        return ResponseEntity.created(location).body(saved);
-        // 201 Created 라는 상태코드 자동으로 붙이기
+        return ResponseEntity.created(location).body(UserResponseDto.from(saved));
+        // 201 Created + Location 헤더 + 응답 바디(민감 정보를 제거한 UserResponseDto) 반환
     }
 
 
@@ -60,25 +65,28 @@ public class UserController {
     //users PK값으로 조회
     @GetMapping("/{id}") //Get요청 /api/users/{id} 요청 처리
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //2차방어선
-    public ResponseEntity<User> getById(@PathVariable Long id){//@PathVariable Long id :URL의{id}를 변수에 담음
+    public ResponseEntity<UserResponseDto> getById(@PathVariable Long id){//@PathVariable Long id :URL의{id}를 변수에 담음
         User user = userService.getById(id); //실행 비즈니스 로직, 유저서비스호출해서 명령전달
-        return ResponseEntity.ok(user); // HTTP코드 200 응답과 함께 User정보 반환
+        return ResponseEntity.ok(UserResponseDto.from(user)); // DTO로 감싸서 반환
     }
 
     //전체조회 (관리자용)
     @GetMapping // GET /api/users
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getAll(){
-        List<User> users = userService.getAll();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<List<UserResponseDto>> getAll(){
+        List<User> users = userService.getAll(); // 전체 사용자 엔티티 목록 조회
+        List<UserResponseDto> result = users.stream()
+                .map(UserResponseDto::from) //엔티티 -> DTO로 일괄 변환
+                .collect(Collectors.toList()); // Java 8 호환 수집 (또는 .toList() 사용 가능)
+        return ResponseEntity.ok(result);
     }
 
     //username으로 조회 (관리자용)
     @GetMapping("/username/{username}") // GET /api/users/username/{username}
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<User> getByUsername(@PathVariable String username){
-        User user = userService.getByUsername(username);
-        return ResponseEntity.ok(user); // 200 OK
+    public ResponseEntity<UserResponseDto> getByUsername(@PathVariable String username){
+        User user = userService.getByUsername(username); // username 기준 단일 조회
+        return ResponseEntity.ok(UserResponseDto.from(user)); // 200 OK + 단일DTO 반환
     }
 
     // UPDATE 닉네임, 이메일 부분 수정하기 (본인 or 관리자)
@@ -86,22 +94,24 @@ public class UserController {
     //닉네임 수정하기
     @PatchMapping("/{id}/nickname") // PATCH /api/users/{id}/nickname
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
-    public ResponseEntity<User> updateNickname(
+    public ResponseEntity<UserResponseDto> updateNickname(
             @PathVariable Long id,
-            @RequestBody NicknameUpdateRequest request // 간단 요청 바디(임시 DTO)
+            @Valid @RequestBody NicknameUpdateRequest request
+            // 간단 요청 바디(임시 DTO) +@Valid로 공백 검증
     ){
         User updated = userService.updateNickname(id, request.getNickname());
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(UserResponseDto.from(updated)); //변경 결과를 응답 DTO로 반환
     }
 
+    //이메일 수정
     @PatchMapping("/{id}/email") // PATCH /api/users/{id}/email
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id") // 본인 또는 관리자만
-    public ResponseEntity<User> updateEmail(
+    public ResponseEntity<UserResponseDto> updateEmail(
             @PathVariable Long id,
-            @RequestBody EmailUpdateRequest request // 간단 요청 바디(임시 DTO)
+            @Valid @RequestBody EmailUpdateRequest request // 간단 요청 바디(임시 DTO) + 공백,형식검사
     ){
-        User updated = userService.updateEmail(id, request.getEmail());
-        return ResponseEntity.ok(updated);
+        User updated = userService.updateEmail(id, request.getEmail());//서비스에서 변경/검증
+        return ResponseEntity.ok(UserResponseDto.from(updated)); //DTO로 감싸 반환
     }
 
     // Delete: 회원 삭제(본인 or 관리자)/
@@ -117,12 +127,16 @@ public class UserController {
     // 실제 운영에서는 별도 DTO 파일로 분리하고 @Valid, @NotBlank, @Email 등을 부여
 
     public static class NicknameUpdateRequest {
-        private String nickname; // JSON: { "nickname": "새닉네임" }
-        public String getNickname() { return nickname; }
-        public void setNickname(String nickname) { this.nickname = nickname; }
-    }
+       @NotBlank(message = "닉네임은 공백일 수 없습니다.") // 컨트롤러 입구 검증
+        private String nickname; // JSON : { "nickname" : "새닉네임"}
+
+        public String getNickname(){return nickname;} //직렬화,검증 을 위한 getter
+        public void setNickname(String nickname){this.nickname=nickname;}//역직렬화 setter
+        }
 
     public static class EmailUpdateRequest {
+        @NotBlank(message = "이메일은 필수 입력 사항입니다.")
+        @Email(message = "올바른 이메일 형식을 입력하세요")
         private String email; // JSON: { "email": "new@example.com" }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
