@@ -15,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.security.core.parameters.P;
 
 @Getter
 @NoArgsConstructor //기본 생성자 자동 생성(JSON 역직렬화)
@@ -26,7 +25,7 @@ public class UserSignupRequestDto {
     //username
     @NotBlank(message = "ID는 필수 입력사항입니다.")
     @Pattern( //조건설정
-            regexp="^(?=.[A-Za-z])(?=.*\\d)[A-za-z\\d]{4,20}$",
+            regexp="^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{4,20}$",
             message = "ID는 영문+숫자 조합 4~20자이며, 특수문자는 사용 불가합니다."
     )
     @Size(max=20,message = "ID는 최대 20자까지 가능합니다.")
@@ -45,7 +44,7 @@ public class UserSignupRequestDto {
     //password : DTO에서 정책 검증 수행(최소 8자, 영문/숫자 각1개 이상, 특수문자는 선택허용)
     @NotBlank(message = "비밀번호는 공백일 수 없습니다.")
     @Pattern( //영문&숫자 1개 이상씩, 특수문자는 선택적 허용
-            regexp = "^(?=.*[A-za-z])(?=.*\\d).{8,50}$",
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_\\-+=~]{8,50}$",
             message = "비밀번호는 영문과 숫자를 각각 1자 이상 포함해야 합니다."
      )
     private String password; //서비스계층에서 encode(암호화) 후 엔티티 설정
