@@ -1,11 +1,14 @@
 package com.example.demo.domain.user.service;
 
 
+import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,19 +19,31 @@ import java.util.List; //목록 반환용
 @Transactional(readOnly = true) //기본적으로 읽기 전용 트랜잭션 ( 성능 최적화 )
 public class UserService {
     private final UserRepository userRepository; // DB접근을 담당하는 Repository
+    private final PasswordEncoder passwordEncoder; //비밀번호 암호화용 의존성
 
     @Transactional //쓰기 작업이므로 readOnly=false 로 오버라이드
-    public User register(User user){ // 회원 등록(Create)
+    public User register(@Valid UserSignupRequestDto dto){ // 회원 등록(Create)
         // 1) username 중복검사
-        validateDuplicateUsername(user.getUsername()); //validateDuplicate : 중복검증
+        validateDuplicateUsername(dto.getUsername()); //validateDuplicate : 중복검증
 
-        // 2) eamail 중복 검사 (null 이 아닐때만 체크하기)
-        if(user.getEmail() != null && !user.getEmail().isBlank()){
-            validateDuplicateEmail(user.getEmail());
+        //  email 중복 검사 (null 이 아닐때만 체크하기)
+        if(dto.getEmail() != null && !dto.getEmail().isBlank()){
+            validateDuplicateEmail(dto.getEmail());
         }
+        // 2) 비밀번호 암호화
+        String encoded = passwordEncoder.encode(dto.getPassword());
 
-        // 3) 저장, 검증 통과 시 Repository를 통해 저장하고, 영속화된 엔티티 반환
-        return userRepository.save(user);
+        // 3) DTO -> 엔티티 변환 (엔티티 @Builder 사용)
+        User entity = User.builder()
+                .username(dto.getUsername())
+                .password(encoded) // 나중에 encoder 붙이면 encoded 사용
+                .email(dto.getEmail())
+                .nickname(dto.getNickname())
+                .build();
+        //엔티티의 @PrePersist 훅에서 username,email trim과 소문자변환 정규화 수행
+
+        // 4) 저장, 검증 통과 시 Repository를 통해 저장하고, 영속화된 엔티티 반환
+        return userRepository.save(entity);
         /*추 후 확장 할 것들
         *  - PasswordEncoder 적용
         *  - 회원가입 이벤트 발행(알림/이메일 인증)*/
@@ -40,7 +55,8 @@ public class UserService {
         if (username == null || username.isBlank()){ // 기본 유효성 검사
             throw new IllegalArgumentException("ID는 필수 입력 사항입니다.");
         }
-        boolean exists = userRepository.findByUsername(username).isPresent();// 중복 여부 확인
+        String norm = username.trim().toLowerCase(); // 엔티티 @PrePersist와 동일 정책
+        boolean exists = userRepository.findByUsername(norm).isPresent();// 중복 여부 확인
         if (exists){
             throw new IllegalArgumentException("이미 사용중인 ID 입니다 : " + username);
         }
@@ -48,7 +64,8 @@ public class UserService {
 
     // email 중복 검사 (DB확인)
     private void validateDuplicateEmail(String email){
-        boolean exists = userRepository.findByEmail(email).isPresent(); // 중복 여부 확인
+        String norm = email.trim().toLowerCase(); // 엔티티 @PrePersist와 동일 정책
+        boolean exists = userRepository.findByEmail(norm).isPresent(); // 중복 여부 확인
         if (exists){
             throw new IllegalArgumentException("이미 사용중인 E-mail 입니다 : "+ email);
         }
