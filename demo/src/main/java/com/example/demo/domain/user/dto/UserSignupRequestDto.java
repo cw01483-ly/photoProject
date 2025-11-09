@@ -28,7 +28,7 @@ public class UserSignupRequestDto {
             regexp="^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{4,20}$",
             message = "ID는 영문+숫자 조합 4~20자이며, 특수문자는 사용 불가합니다."
     )
-    @Size(max=20,message = "ID는 최대 20자까지 가능합니다.")
+    @Size(min = 4,max=20,message = "ID는 3 ~ 20자까지 가능합니다.")
     //regexp : 정규 표현식(Regular Expression) = 문자규칙
     // +: 수량자(quantifier)로, 앞의 패턴([A-Za-z0-9])이 한 번 이상 반복되어야 함을 의미
             /*
@@ -47,6 +47,7 @@ public class UserSignupRequestDto {
             regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_\\-+=~]{8,50}$",
             message = "비밀번호는 영문과 숫자를 각각 1자 이상 포함해야 합니다."
      )
+    @Size(min = 8, max =50 ,message = "비밀번호는 8~64자 까지 가능합니다.")
     private String password; //서비스계층에서 encode(암호화) 후 엔티티 설정
 
     //nickname : 한글,영문,숫자,언더바 허용, 최대 30자
@@ -55,7 +56,7 @@ public class UserSignupRequestDto {
             regexp = "^[A-Za-z0-9가-힣_]+$",
             message = "닉네임은 한글, 영문, 숫자, _(언더바)만 조합해 사용할 수 있습니다."
     )
-    @Size (max=30, message = "닉네임은 최대 30자까지 가능합니다.")
+    @Size (min = 4, max=30, message = "닉네임은 4 ~ 30자까지 가능합니다.")
     private String nickname;
 
     //email : 형식검증+공백금지, 중복여부는 서비스/DB에서 검사
