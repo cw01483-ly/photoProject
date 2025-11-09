@@ -1,6 +1,7 @@
 package com.example.demo.domain.user.controller;
 
 
+import com.example.demo.domain.user.dto.UserLoginRequestDto;
 import com.example.demo.domain.user.dto.UserResponseDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
@@ -59,6 +60,22 @@ public class UserController {
         // 201 Created + Location 헤더 + 응답 바디(민감 정보를 제거한 UserResponseDto) 반환
     }
 
+    // 로그인 처리
+    @PostMapping("/login") // Post/api/users/Login
+    public ResponseEntity<UserResponseDto> login(
+            @Valid @RequestBody UserLoginRequestDto request //username,passwrod 평문입력
+            ){
+        /*
+            - 인증(로그인) 요청을 처리하는 엔드포인트
+            - UserService에 위임하여 아이디,비밀번호 검증 수행 할 예정
+            - 성공 시 User 엔티티 받아와 UserResponseDto로 변환 후 반환
+            - 실패 시 UserService에서 예외 던지고 추후 @ControllerAdvice에서 한글 응답으로 처리할 예정
+         */
+        User loggedInUser = userService.login(request);
+
+        return ResponseEntity.ok(UserResponseDto.from(loggedInUser));
+        // 200 Ok + 로그인한 사용자 정보(민감정보 제거된 DTO) 반환
+    }
 
     //READ 단일, 전체, username 조회 (사용자 조회)
 
