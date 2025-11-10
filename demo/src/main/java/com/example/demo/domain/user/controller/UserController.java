@@ -66,14 +66,14 @@ public class UserController {
             @Valid @RequestBody UserLoginRequestDto request //username,passwrod 평문입력
             ){
         /*
-            - 인증(로그인) 요청을 처리하는 엔드포인트
-            - UserService에 위임하여 아이디,비밀번호 검증 수행 할 예정
-            - 성공 시 User 엔티티 받아와 UserResponseDto로 변환 후 반환
-            - 실패 시 UserService에서 예외 던지고 추후 @ControllerAdvice에서 한글 응답으로 처리할 예정
-         */
-        User loggedInUser = userService.login(request);
-
-        return ResponseEntity.ok(UserResponseDto.from(loggedInUser));
+            - 로그인 요청을 처리하는 엔드포인트
+            - UserService에 위임하여 아이디·비밀번호 검증 및 마지막 로그인 시각 갱신 수행
+            - 성공 시 UserResponseDto 반환 (비밀번호 등 민감정보 제외)
+            - 실패 시 UserService에서 예외 발생 → @ControllerAdvice에서 처리 예정
+        */
+        // userService에서 이미 UserResponseDto를 리턴하므로 타입 맞춰주기.
+        UserResponseDto response = userService.login(request);
+        return ResponseEntity.ok(response);
         // 200 Ok + 로그인한 사용자 정보(민감정보 제거된 DTO) 반환
     }
 
