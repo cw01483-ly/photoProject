@@ -1,19 +1,24 @@
 package com.example.demo.domain.user.service;
 
 
+import com.example.demo.domain.user.dto.UserLoginRequestDto;
+import com.example.demo.domain.user.dto.UserResponseDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List; //목록 반환용
 
+@Slf4j
 @Service
 @RequiredArgsConstructor // final필드(UserRepository)로 생성자를 자동으로 생성
 @Transactional(readOnly = true) //기본적으로 읽기 전용 트랜잭션 ( 성능 최적화 )
@@ -49,6 +54,45 @@ public class UserService {
         *  - 회원가입 이벤트 발행(알림/이메일 인증)*/
     }
 
+    //로그인 메서드
+    @Transactional(readOnly = true) // login()메서드는 기본적으로 조회용, 읽기전용 트랜잭션으로 실행
+    public UserResponseDto login(UserLoginRequestDto request){ //로그인 요정DTO를 받아 응답DTO를 반환하는 메서드 시작
+
+        // 1) 요청 DTO에서 아이디, 비밀번호 원본 문자열 꺼내기
+        String rawUsername = request.getUsername(); //사용자가 입력한 username 가져오기
+        String rawPassword = request.getPassword(); // 사용자가 입력한 password(암호화 전)
+
+        // 2) 아이디, 비밀번호의 공백,null 기본 검증
+        if (rawUsername == null || rawUsername.isBlank()){
+            throw new IllegalArgumentException("아이디를 입력해주세요.");
+        }
+        if (rawPassword == null || rawPassword.isBlank()){
+            throw new IllegalArgumentException("비밀번호를 입력해주세요.");
+        }
+
+        // 3) 아이디 문자열 정규화 (비밀번호는 정규화 X)
+        String normalizedUsername = rawUsername.trim().toLowerCase();
+
+        // 4) 아이디로 회원 조회 (없으면 에러메시지)
+        User user = userRepository.findByUsername(normalizedUsername)
+                .orElseThrow(() -> { //로그로써 어느부분이 틀렸는지 기록을 남기고, 메시지는 일률적으로 처리해 보안강화.
+                    log.warn("로그인 실패 - 존재하지 않는 아이디. username={}", normalizedUsername);
+                    return new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
+                }); //UserRepository에서 Optional을 사용중이므로 orElseThrow(옵셔널 전용문법) 사용
+
+        // 5) 비밀번호 검증 ( 사용자가 입력한 평문 과 DB암호화된 비밀번호 비교 )
+        boolean matches = passwordEncoder.matches(rawPassword, user.getPassword());
+        if(!matches){
+            log.warn("로그인 실패 - 비밀번호 불일치. username={}", normalizedUsername);
+            throw new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
+        } // boolean은 단순 맞고 틀림의 결과값을 반환하기에 throw 사용
+
+        // 6) 마지막 로그인 시각 업데이트 (User엔티티)
+        user.updateLastLoginAt(LocalDateTime.now());
+
+        // 7) 로그인 성공 -> User엔티티를 DTO로 변환 후 반환.
+        return UserResponseDto.from(user);
+    }
 
     // username 중복검사 (DB확인)
     private void validateDuplicateUsername(String username){
