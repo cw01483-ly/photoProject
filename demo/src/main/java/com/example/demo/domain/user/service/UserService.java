@@ -55,7 +55,7 @@ public class UserService {
     }
 
     //로그인 메서드
-    @Transactional(readOnly = true) // login()메서드는 기본적으로 조회용, 읽기전용 트랜잭션으로 실행
+    @Transactional
     public UserResponseDto login(UserLoginRequestDto request){ //로그인 요정DTO를 받아 응답DTO를 반환하는 메서드 시작
 
         // 1) 요청 DTO에서 아이디, 비밀번호 원본 문자열 꺼내기
