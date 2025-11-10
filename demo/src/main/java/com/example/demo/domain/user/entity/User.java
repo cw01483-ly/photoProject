@@ -119,13 +119,17 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     //추후 관리자계정이 false로 바꾼다면 해당 계정은 비활성화됨
 
 
-    //마지막 접속 시각
+    //마지막 접속 시각 필드
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-
     /*추후 추가 예정
     * 1. @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     * 2. private List<Post> posts = new ArrayList<>();*/
+
+    // 마지막 접속 시각 메서드.(성공시 UserService에서 호출)
+    public void updateLastLoginAt(LocalDateTime lastLoginAt){
+        this.lastLoginAt = lastLoginAt;
+    }
 
     //              도메인 비지니스 메서드
 
