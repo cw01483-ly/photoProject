@@ -43,9 +43,9 @@ public class UserSignupRequestDto {
 
     //password : DTO에서 정책 검증 수행(최소 8자, 영문/숫자 각1개 이상, 특수문자는 선택허용)
     @NotBlank(message = "비밀번호는 공백일 수 없습니다.")
-    @Pattern( //영문&숫자 1개 이상씩, 특수문자는 선택적 허용
-            regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_\\-+=~]{8,50}$",
-            message = "비밀번호는 영문과 숫자를 각각 1자 이상 포함해야 합니다."
+    @Pattern( //영문&숫자 1개 이상씩, 특수문자는 선택적 허용, 공백사용 금지
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_\\-+=~]{8,64}$",
+            message = "비밀번호는 영문과 숫자를 각각 1자 이상 포함해야 하며, 공백을 포함할 수 없습니다.."
      )
     @Size(min = 8, max =50 ,message = "비밀번호는 8~64자 까지 가능합니다.")
     private String password; //서비스계층에서 encode(암호화) 후 엔티티 설정
