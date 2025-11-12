@@ -15,6 +15,7 @@ import lombok.Getter;
     - 성공,실패 여부(Success),메시지(Message),데이터(data)를 담음
 */
 public class ApiResponse<T> {
+    // 제네릭 사용 이유 : 다양한 타입에 대해 동일한 알고리즘을 적용, 코드를 재사용하기에 효과적
 
     //성공여부 (True/False)
     private final boolean success;
