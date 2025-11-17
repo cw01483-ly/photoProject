@@ -167,7 +167,7 @@ public class PostService {
 
         post.delete();
         // JPA 변경 감지에 의해 트랜잭션 종료시 UPDATE쿼리 실행
-        // ->> (is_deleted = true)로 변경 
+        // ->> (is_deleted = true)로 변경
     }
 
 
