@@ -114,12 +114,6 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
         //제목 혹은 컨텐츠가 공백이 아닐때 변경되도록 조건부 설치, 문자열의 앞뒤 공백은 제거(trim)
     }
 
-    // 조회수 증가 메서드
-    public void increaseViews(){
-        //게시글 열람시 호출되어 views값 1 증가
-        this.views++;
-    }
-
     //삭제 수행 메서드 (실제 DB삭제 X )
     public void delete(){
         this.isDeleted=true;
