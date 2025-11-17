@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
         3 전체 조회 (페이징)
         4 작성자 기준 조회
         5 검색 (제목 + 내용)
+        6 게시글 수정 (Update)
+        7 게시글 삭제 (Soft Delete)
 */
 public class PostService {
     private final PostRepository postRepository;
@@ -123,5 +125,51 @@ public class PostService {
             PostResponseDto.from(Post)로 변환해서
             Page<PostResponseDto> 로 만들어서 반환해라.”*/
     }
+
+    // 6. 게시글 수정 -> 수정을 위해 별도 트랜잭션 필요
+    @Transactional
+    /* 6-1) 수정 게시글 조회
+        - 게시글 없으면 예외
+        - softDelete 적용으로 삭제된 글 조회 X
+    */
+    public PostResponseDto updatePost(Long postId, String title, String content){
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
+
+        /* 6-2) 엔티티의 비지니스 메서드 사용하여 제목/내용 수정
+            - Post.update(title,content) 내부에서 null,공백 체크 + trim 처리
+            - JPA 변경 감지(Dirty Checking)에 의해 트랜잭션 종료시 자동으로 UPDATE 쿼리 실행
+        */
+        post.update(title,content);
+
+        // 6-3) 수정된 엔티티를 DTO 변환 후 반환
+        return PostResponseDto.from(post);
+    }
+
+    // 7. 게시글 삭제 ( Soft Delete )
+    @Transactional
+    public void deletePost(Long postId){
+        /* 7-1) 삭제할 게시글 조회
+            - softDelete 적용(@Where is_deleted=false)
+            - 이미 삭제된 글(is_deleted=true)은 조회 X
+        */
+        Post post = postRepository.findById(postId)
+                .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id="+postId));
+
+        /* 7-2) 엔티티의 delete() 메서드 호출
+            - Post.delete() 내부에서 isDeleted=true로 설정
+            - @Where(is_deleted=false)에 의해 이후 조회에서 자동 제외
+            - @SQLDelete와 함께 사용할 경우, 실제 delete(post) 호출과
+              전략을 통일하는 방식도 있으나
+              여기서는 엔티티 비지니스 메서드를 통한 SoftDelete 패턴 사용
+        */
+
+        post.delete();
+        // JPA 변경 감지에 의해 트랜잭션 종료시 UPDATE쿼리 실행
+        // ->> (is_deleted = true)로 변경 
+    }
+
+
 
 }
