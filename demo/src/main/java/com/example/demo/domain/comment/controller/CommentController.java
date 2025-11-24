@@ -104,7 +104,10 @@ public class CommentController {
     ) {
 
         // 1) 서비스 계층에서 댓글 내용 수정 (엔티티 반환)
-        Comment updatedComment = commentService.updateComment(commentId, request.getContent());
+        Comment updatedComment = commentService.updateComment(
+                commentId,
+                userId,
+                request.getContent());
         /*
             ️현재 CommentService.updateComment(..)는 userId를 파라미터로 받지 않음
             - "작성자만 수정 가능" 같은 권한 체크를 추가하려면
@@ -130,7 +133,7 @@ public class CommentController {
             @AuthenticationPrincipal(expression = "id") Long userId  // 로그인 유저 ID (권한 체크용으로 사용 가능)
     ) {
         // 1) 서비스 계층에 삭제 요청
-        commentService.deleteComment(commentId);
+        commentService.deleteComment(commentId,userId);
         /*
             ️"작성자만 삭제 가능" 같은 검증을 추가하려면
             CommentService.deleteComment(commentId, userId) 형태로 확장 가능
