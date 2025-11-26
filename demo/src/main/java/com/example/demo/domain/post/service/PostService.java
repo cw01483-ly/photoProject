@@ -11,7 +11,9 @@ import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,8 +95,6 @@ public class PostService {
         return PostResponseDto.from(post);
     }
 
-    // 게시글 상세 조회 ( 게시글 + 댓글 목록 동시 조회 )
-    //      - 단건 게시글 정보 + 조회수 증가 + 해당 게시글 달린 댓글 목록 반환
     @Transactional //조회수 증가 + 댓글 조회 포함 > 데이터 변경
     public PostDetailResponseDto getPostDetail(Long postId){
         // 1) 조회수 증가 (게시글 없으면 예외 발생)
@@ -106,23 +106,58 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
         /* 3) 해당 게시글의 댓글 엔티티 목록 조회
-            -CommentRepository.findByPostId(postId) 사용
-            -Comment 엔티티에 @Where 적용으로 논리 삭제된 댓글은 자동 제외
+                페이징을 사용하여 "최신 10개"만 조회
+                + Page 객체를 통해 전체 댓글 개수도 함께 가져옴
+            - Comment 엔티티에 @Where 적용으로 논리 삭제된 댓글은 자동 제외
         */
-        List<Comment> comments = commentRepository.findByPostId(postId);
+
+        //  한 번에 가져올 댓글 개수 설정 (최신 10개)
+        int size = 10;
+
+        //  0번 페이지(첫 페이지)를, id 기준 내림차순으로 조회하도록 Pageable 생성
+        Pageable pageable = PageRequest.of(
+                0,      // 첫 페이지(0부터 시작)
+                size,              // 한 페이지당 10개
+                Sort.by(Sort.Direction.DESC, "id")   // id 기준 내림차순 정렬
+        );
+
+        // 페이징으로 댓글 조회 (최신 10개 + 전체 개수 정보 포함)
+        Page<Comment> commentPage = commentRepository.findByPostId(postId, pageable);
+
+        // Page<Comment>에서 실제 데이터(댓글 10개까지)를 꺼냄
+        List<Comment> latestComments = commentPage.getContent();
+
+        // 전체 댓글 개수 (삭제되지 않은 댓글 기준)
+        long totalCommentsCount = commentPage.getTotalElements();
 
         /* 4) 댓글 엔티티 목록 -> 댓글 응답 DTO 목록으로 변환
             - CommentResponseDto.from(comment)을 각 댓글에 적용하여
               화면에 내려줄 형태(List<CommentResponseDto>)로 변환
+            - 여기서는 "최신 10개"만 변환
          */
-        List<CommentResponseDto> commentDtoList = comments.stream()
+        List<CommentResponseDto> commentDtoList = latestComments.stream()
                 .map(CommentResponseDto::from)
                 .toList();
+
+        // 실제로 내려가는 최신 댓글 개수 (10개 또는 그 이하)
+        int latestCommentsSize = commentDtoList.size();
+
         /* 5) PostDetailResponseDto 로 통합 응답 생성
          - Post 엔티티 + 댓글 DTO 목록을 하나의 응답 객체로 묶어서 반환
+         - 이번에는
+            * 최신 댓글 10개 (latestComments)
+            * 전체 댓글 개수 (totalCommentsCount)
+            * 내려간 댓글 개수 (latestCommentsSize)
+           정보를 함께 내려줌
         */
-        return PostDetailResponseDto.from(post, commentDtoList);
+        return PostDetailResponseDto.from(    // 파라미터 시그니처 변경
+                post,                         // 게시글 정보
+                commentDtoList,               // 최신 댓글 목록(최대 10개)
+                totalCommentsCount,           // 전체 댓글 개수
+                latestCommentsSize            // 실제로 포함된 댓글 개수
+        );
     }
+
 
     // 3. 최신 게시글 전체 조회 (페이징)
     public Page<PostResponseDto> getPosts(Pageable pageable){
