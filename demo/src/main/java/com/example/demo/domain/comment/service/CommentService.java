@@ -7,6 +7,10 @@ import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +82,27 @@ public class CommentService {
         return commentRepository.findByPostId(postId);
     }
 
+    public Page<Comment> getCommentsByPostWithPaging(Long postId, int page, int size) {
+
+        // 1) 게시글 존재 여부 검증
+        postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
+        /* 2) Pageable 생성
+           PageRequest.of(page, size, sort) 를 사용해서
+            - 몇 번째 페이지(page)를,
+            - 한 페이지에 몇 개(size)를,
+            - 어떤 정렬 기준(sort)으로 가져올지 설정
+        */
+        Pageable pageable = PageRequest.of(
+                page, // 0부터 시작하는 페이지 번호
+                size, // 한 페이지에 들어갈 댓글 수
+                Sort.by(Sort.Direction.DESC, "id") // id 기준 내림차순 정렬(최근 댓글이 먼저 오도록)
+        );
+
+        // 3) Repository에 페이징 조건과 함께 조회 요청
+        //    Soft Delete(@Where) 덕분에 is_deleted = false 인 댓글만 조회
+        return commentRepository.findByPostId(postId, pageable);
+    }
     /*
         특정 사용자가 작성한 댓글 목록 조회
         파라미터
