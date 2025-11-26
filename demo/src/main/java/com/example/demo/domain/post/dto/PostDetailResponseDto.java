@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-// 게시글 상세 화면 전용 응답 DTO, 게시글 자체 정보 + 댓글 목록
+// 게시글 정보 + 최신 댓글 목록 + 전체 댓글 개수
 public class PostDetailResponseDto {
 
     private Long id;
@@ -23,16 +23,29 @@ public class PostDetailResponseDto {
     private String authorName; //User nickname
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<CommentResponseDto> comments;
-    // 게시글에 달린 댓글 목록, 각 요소는 CommentResponseDto로 변환된 댓글 정보
+    // 서비스 계층에서 최신 10개만 추려서 댓글목록을 담는 필드로 설계
+    private List<CommentResponseDto> latestComments;
+
+    // 전체 댓글 개수 표시
+    private long totalCommentsCount;
+
+    // 응답에서 내려준 최신 댓글 개수
+    private int latestCommentsSize;
+
+
 
     /*      정적 팩토리 메서드
         - Post 엔티티와 댓글 응답DTO 목록(List<CommentResponseDto>)을 받아
            PostDetailResponseDto 로 변환해주는 메서드
         - 서비스 계층에서 변환 로직을 한 곳에 모아 코드 깔끔하게 만듦
     */
-    public static PostDetailResponseDto from(Post post, List<CommentResponseDto> comments){
-        // null 방어: comments 가 null 인 상황을 대비하여 빈 리스트로 처리할 수도 있음
+    public static PostDetailResponseDto from(
+            Post post,
+            List<CommentResponseDto> latestComments, //최신 댓글 목록 (최대 10)
+            long totalCommentsCount, //전체 댓글 개수
+            int latestCommentsSize
+    ){
+        // null 방어: latestComments 가 null 인 상황을 대비하여 빈 리스트로 처리할 수도 있음
         // (현재는 서비스 계층에서 알아서 List를 넘겨준다고 가정하고 그대로 사용)
         return PostDetailResponseDto.builder()
                 .id(post.getId()) // Post 엔티티의 id값을 DTO id필드에 설정
@@ -43,7 +56,9 @@ public class PostDetailResponseDto {
                 .authorName(post.getAuthor().getNickname())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
-                .comments(comments) // 서비스 계층에서 미리 CommentResponseDto 리스트로 변환한 댓글 목록을 그대로 설정
+                .latestComments(latestComments)           // 최신 댓글 목록 설정
+                .totalCommentsCount(totalCommentsCount)   // 전체 댓글 개수 설정
+                .latestCommentsSize(latestCommentsSize)   // 이번 응답에 포함된 댓글 개수 설정
                 .build();
         // 빌더에 채워진 값들을 사용해서 최종 PostDetailResponseDto 객체를 생성하여 반환
     }
