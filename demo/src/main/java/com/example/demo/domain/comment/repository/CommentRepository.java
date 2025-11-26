@@ -1,6 +1,8 @@
 package com.example.demo.domain.comment.repository;
 
 import com.example.demo.domain.comment.entity.Comment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,4 +31,18 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT c FROM Comment c WHERE c.author.id = :userId ORDER BY c.id DESC")
     List<Comment> findByAuthorId(@Param("userId") Long userId);
     // userId로 댓글 목록을 조회하는 메서드
+
+    /*      페이징 가능한 댓글 조회 메서드
+        - 특정 Post ID에 달린 댓글을 "페이지 단위"로 조회
+        - 파라미터
+            postId : 어떤 게시글의 댓글을 조회할지
+            pageable : page 번호, size(한 페이지 크기), 정렬 기준을 담은 객체
+        - 반환값
+            Page<Comment> : 댓글 목록(List) + 전체 페이지 수, 전체 개수 등의 메타정보 포함
+        - 메서드 이름 규칙 기반 쿼리 생성
+            findByPostId(...) 이름 덕분에
+            자동으로 WHERE c.post.id = :postId 조건이 붙고,
+            Pageable에 설정한 정렬 기준으로 ORDER BY 가 적용
+    */
+    Page<Comment> findByPostId(Long postId, Pageable pageable);
 }
