@@ -7,6 +7,7 @@ import com.example.demo.domain.comment.entity.Comment;
 import com.example.demo.domain.comment.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -68,6 +69,36 @@ public class CommentController {
         return ResponseEntity.ok(responseList);
     }
 
+    /* 특정 게시글 댓글 목록 페이징 조회
+        - HTTP GET /api/posts/{postId}/comments/paging
+        - 요청 파라미터 :
+            page : 조회할 페이지 번호 (프론트1시작, 백엔드는0으로 맞춰줄것)
+            size : 한 페이지에 몇 개의 댓글 가져올 지( 기본 10 )
+        - 반환 : Page<CommentResponseDto>
+                (댓글 데이터 + 페이징 메타정보 포함)
+    */
+    @GetMapping("/api/posts/{postId}/comments/paging") //게시글 기준 댓글페이징 조회
+    public ResponseEntity<Page<CommentResponseDto>> getCommentsByPostWithPaging(
+            @PathVariable Long postId,// URL 경로에서 게시글 ID 추출
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        // 0) 스프링에게 페이지 초기값 0으로 변환
+        int zeroBasedPage = Math.max(0, page - 1);
+        //프론트가 실수로 0보냈을 때 방지, 0이나 음수면 자동으로 0페이지로 고정
+        // 1) 서비스 계층에서 페이징 된 댓글 엔티티 페이지 조회
+        Page<Comment> commentPage =
+                commentService.getCommentsByPostWithPaging(
+                postId, page, size);
+        /* 2) Page<Comment> -> Page<CommentResponseDto> 로 변환
+            Page 타입에는 map(Function)을 제공해서 요소 타입만 바꾸고
+            페이지 정보(전체 개수, 전체 페이지 수 등)는 그대로 유지
+        */
+        Page<CommentResponseDto> responsePage = commentPage
+                .map(CommentResponseDto::from);
+        // 3) HTTP 200(OK) 상태 코드와 함께 Page<CommentResponseDto> 반환
+        return ResponseEntity.ok(responsePage);
+    }
 
     /*
         댓글 단건 조회
