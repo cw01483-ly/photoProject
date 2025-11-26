@@ -109,9 +109,9 @@ public class CommentController {
                 userId,
                 request.getContent());
         /*
-            ️현재 CommentService.updateComment(..)는 userId를 파라미터로 받지 않음
-            - "작성자만 수정 가능" 같은 권한 체크를 추가하려면
-              CommentService.updateComment(commentId, userId, newContent) 형태로 확장 가능
+            현재 코드는 이미 CommentService.updateComment(commentId, userId, newContent) 형태로 구현되어 있으며,
+            서비스 계층에서 userId와 comment.getAuthor().getId()를 비교하여
+            "댓글 작성자 본인만 수정 가능"하도록 권한 검증을 수행
          */
 
         // 2) 수정된 엔티티를 응답 DTO로 변환
@@ -135,8 +135,9 @@ public class CommentController {
         // 1) 서비스 계층에 삭제 요청
         commentService.deleteComment(commentId,userId);
         /*
-            ️"작성자만 삭제 가능" 같은 검증을 추가하려면
-            CommentService.deleteComment(commentId, userId) 형태로 확장 가능
+            현재는 CommentService.deleteComment(commentId, userId)를 호출하도록 이미 확장되어 있으며,
+            서비스 계층에서 댓글의 작성자 ID와 로그인한 userId를 비교해
+            "댓글 작성자 본인만 삭제 가능"하도록 검증한 뒤, 논리 삭제(Soft Delete)를 수행
          */
         // 2) HTTP 204(NO_CONTENT) 상태 코드만 응답 (본문 없음)
         return ResponseEntity.noContent().build();
