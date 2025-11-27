@@ -13,7 +13,7 @@ import lombok.Getter;
         likeCount : 해당 게시글의 전체 좋아요 개수
  */
 @Getter
-@Builder 
+@Builder
 public class PostLikeToggleResponseDto {
 
     private final Long postId;   // 좋아요 대상 게시글 ID
