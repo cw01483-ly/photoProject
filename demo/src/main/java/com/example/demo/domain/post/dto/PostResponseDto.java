@@ -22,11 +22,16 @@ public class PostResponseDto {
     private String authorName; //작성자(User엔티티 username)
     private LocalDateTime createdAt; // 생성 시간
     private LocalDateTime updatedAt; // 마지막 수정 시간
+    private long likeCount; // 해당 게시글 Like 수
 
     //엔티티인 Post를 DTO로 변환하는 정적 메서드
     // -> 컨트롤러나 서비스에서 Post엔티티를 받아 해당 메서드로 DTO 변환
-
+    // 기존 코드와의 호환성을 위해 likeCount를 0으로 두는 기본 버전 유지
     public static PostResponseDto from(Post post){
+        return from(post, 0L); //Like 개수 알 수 없을 때, 기본값 0설정
+    }
+
+    public static PostResponseDto from(Post post, long likeCount){
         return PostResponseDto.builder()
                 .id(post.getId())
                 .title(post.getTitle())
@@ -35,6 +40,7 @@ public class PostResponseDto {
                 .authorName(post.getAuthor().getUsername()) //User엔티티에서 작성자명 추출
                 .createdAt(post.getCreatedAt())  // BaseTimeEntity에서 상속된 작성시각
                 .updatedAt(post.getUpdatedAt())  // BaseTimeEntity에서 상속된 수정시각
+                .likeCount(likeCount) //Like 개수 설정
                 .build();
     }
 
