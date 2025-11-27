@@ -6,6 +6,7 @@ import com.example.demo.domain.comment.repository.CommentRepository;
 import com.example.demo.domain.post.dto.PostDetailResponseDto;
 import com.example.demo.domain.post.dto.PostResponseDto;
 import com.example.demo.domain.post.entity.Post;
+import com.example.demo.domain.post.repository.PostLikeRepository;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
@@ -39,6 +40,8 @@ public class PostService {
     // 작성자 조회하기 위한 리포지토리
     private final CommentRepository commentRepository;
     // 댓글 조회를 위한 리포지토리 ( 게시글 상세 조회 시, 해당 게시글의 댓글 목록 가져오기 위해)
+    private final PostLikeRepository postLikeRepository;
+    // 게시글 좋아요 정보를 조회하기 위한 리포지토리
 
     // 1. 게시글 생성
     @Transactional // 글생성은 데이터 변경, readOnly=false 트랜잭션 실행
@@ -67,7 +70,7 @@ public class PostService {
         Post saved = postRepository.save(post);
 
         // 엔티티를 DTO로 변환 , Controller에 반환
-        return PostResponseDto.from(saved);
+        return PostResponseDto.from(saved, 0L); //새로만든 글은 좋아요 없다고 보고 likeCount 0으로 세팅
     }
 
     // 2. 게시글 단건 조회 + 조회수 증가
@@ -91,8 +94,11 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id="+postId));
 
-        // 2-3) DTO로 반환하여 반환
-        return PostResponseDto.from(post);
+        // 2-3) 해당 게시글 좋아요 수 조회
+        long likeCount = postLikeRepository.countByPostId(postId);
+
+        // 2-4) DTO로 반환하여 반환 ( 조회수 + Like )
+        return PostResponseDto.from(post, likeCount);
     }
 
     @Transactional //조회수 증가 + 댓글 조회 포함 > 데이터 변경
@@ -142,19 +148,24 @@ public class PostService {
         // 실제로 내려가는 최신 댓글 개수 (10개 또는 그 이하)
         int latestCommentsSize = commentDtoList.size();
 
-        /* 5) PostDetailResponseDto 로 통합 응답 생성
+        // 5) 해당 게시글의 Like 수 조회
+        long likeCount = postLikeRepository.countByPostId(postId);
+
+        /* 6) PostDetailResponseDto 로 통합 응답 생성
          - Post 엔티티 + 댓글 DTO 목록을 하나의 응답 객체로 묶어서 반환
          - 이번에는
             * 최신 댓글 10개 (latestComments)
             * 전체 댓글 개수 (totalCommentsCount)
             * 내려간 댓글 개수 (latestCommentsSize)
+            * LIKE 개수 (likeCount)
            정보를 함께 내려줌
         */
         return PostDetailResponseDto.from(    // 파라미터 시그니처 변경
                 post,                         // 게시글 정보
                 commentDtoList,               // 최신 댓글 목록(최대 10개)
                 totalCommentsCount,           // 전체 댓글 개수
-                latestCommentsSize            // 실제로 포함된 댓글 개수
+                latestCommentsSize,            // 실제로 포함된 댓글 개수
+                likeCount
         );
     }
 
@@ -169,7 +180,11 @@ public class PostService {
         Page<Post> posts = postRepository.findByOrderByIdDesc(pageable);
 
         // 3-2) Page<Post> -> Page<PostResponseDto> 변환해서 반환
-        return posts.map(PostResponseDto::from);
+        // + 각 게시글 좋아요 수를 조회 하고 DTO에 함께 담아줌
+        return posts.map(post -> {
+            long likeCount = postLikeRepository.countByPostId(post.getId()); // 게시글별 LIKE
+            return PostResponseDto.from(post, likeCount); // LIKE 수 포함 DTO 변환
+        });
     }
 
     // 4. 작성자 기준 게시글 조회 (페이징)
@@ -178,8 +193,11 @@ public class PostService {
         // 4-1) 작성자 ID(authorId) 기준 게시글 목록 페이징 조회
         Page<Post> posts = postRepository.findByAuthorId(authorId,pageable);
 
-        // 4-2) DTO로 변환 후 반환
-        return posts.map(PostResponseDto::from);
+        // 4-2) DTO로 변환 후 반환 + 게시글 별 LIKE 수 포함
+        return posts.map(post -> {
+            long likeCount = postLikeRepository.countByPostId(post.getId()); // 게시글 LIKE 수 조회
+            return PostResponseDto.from(post, likeCount);
+        });
     }
 
     // 5. 제목 + 내용 키워드 검색 (IgnoreCase, 페이징)
@@ -190,9 +208,13 @@ public class PostService {
                 .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
                         keyword, keyword, pageable
                 );
-        // 5-2) DTO로 변환 후 반환
+        // 5-2) DTO로 변환 후 반환 + 게시글별 LIKE 수 포함하도록 람다식 변환
+        return posts.map(post -> {
+              long likeCount = postLikeRepository.countByPostId(post.getId());
+              return PostResponseDto.from(post, likeCount);
+                });
+        /* 이전 코드
         return posts.map(PostResponseDto::from);
-        /*
             PostResponseDto::from
                         ==
             “posts(Page<Post>) 안에 들어 있는 모든 Post를
@@ -217,8 +239,9 @@ public class PostService {
         */
         post.update(title,content);
 
-        // 6-3) 수정된 엔티티를 DTO 변환 후 반환
-        return PostResponseDto.from(post);
+        // 6-3) 수정된 엔티티를 DTO 변환 후 반환 + 수정 후 게시글 LIKE 수도 함께 전달
+        long likeCount = postLikeRepository.countByPostId(postId);
+        return PostResponseDto.from(post, likeCount);
     }
 
     // 7. 게시글 삭제 ( Soft Delete )
