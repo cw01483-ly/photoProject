@@ -2,7 +2,7 @@ package com.example.demo.domain.post.repository;
 
 import com.example.demo.domain.post.entity.PostLike;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional; 
+import java.util.Optional;
 
 /*
     PostLikeRepository
