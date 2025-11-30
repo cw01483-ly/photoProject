@@ -26,8 +26,8 @@ public class SecurityConfig {
 
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입(POST /api/users) 은 비로그인 허용
-                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                        // 회원가입(POST /api/users), 로그인(POST /api/users/login) 은 비로그인 허용
+                        .requestMatchers(HttpMethod.POST, "/api/users", "/api/users/login").permitAll()
                         // 그 외 /api/users/**는 인증필요
                         .requestMatchers("/api/users/**").authenticated()
                         // 나머지는 임시로 모두 허용(추후 점진적 강화)
