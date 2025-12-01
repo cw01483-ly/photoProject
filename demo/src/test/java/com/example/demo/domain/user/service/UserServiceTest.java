@@ -1,5 +1,6 @@
 package com.example.demo.domain.user.service;
 
+import com.example.demo.domain.user.dto.UserLoginRequestDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
@@ -39,6 +40,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("회원가입 성공 : 올바른 값이면 User가 저장되고, 비밀번호는 암호화")
         // 테스트 실행 창에서 한글로 보이게
+    // 회원가입 테스트
     void register_success(){
         // [GIVEN] 테스트에 사용할 입력값 준비
         UserSignupRequestDto request = UserSignupRequestDto.builder()
@@ -69,7 +71,7 @@ public class UserServiceTest {
         assertThat(found.getPassword()).isNotBlank();// 암호화된 비밀번호가 존재해야 함
     }
 
-    //Username 중복시 실패 테스트
+    // Username 중복시 실패 테스트
     @Test
     @DisplayName("회원가입 실패 : username 중복되면 예외 발생")
     void register_fail_usernameDuplicated(){
@@ -133,5 +135,39 @@ public class UserServiceTest {
                  (람다식으로 감싸야 한다. 바로 호출하면 assertThrows가 감지할 수 없음)
             ==> register(req2) 실행했을 때 IllegalArgumentException 발생하면 성공
         */
+    }
+
+    // 로그인 성공 테스트
+    @Test
+    @DisplayName("로그인 성공 : 올바른 username,password로 로그인 시 UserResponseDto 반환")
+    void login_success(){
+        //[GIVEN] 1) 회원가입을 통해 유저하나 생성
+        String rawUsername = "loginUser1"; // 사용자가 입력한 원본 (대소문자+숫자)
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username(rawUsername)
+                .password("LoginPassword1")
+                .nickname("로그인유저")
+                .email("login@example.com")
+                .build();
+
+        userService.register(signupRequest); // 회원가입>>DB저장+비밀번호 암호화
+
+        // 2) 로그인 요청 DTO (username + 평문password)
+        UserLoginRequestDto loginRequest = UserLoginRequestDto.builder()
+                .username(rawUsername)
+                .password("LoginPassword1")
+                .build();
+
+        //[WHEN] 로그인 시도, UserResponseDto 반환 가정
+        var response = userService.login(loginRequest);
+
+        //[THEN] 로그인 결과 검증
+        assertThat(response.getUsername()).isEqualTo(rawUsername.toLowerCase());
+
+        // 실제 DB에서 다시 꺼내서 마지막 로그인 시간 갱신확인하려면
+        User found = userRepository.findByUsername("loginUser1")
+                .orElseThrow(() -> new IllegalStateException("로그인 유저를 찾지 못했습니다."));
+
+        assertThat(found.getLastLoginAt()).isNotNull();
     }
 }
