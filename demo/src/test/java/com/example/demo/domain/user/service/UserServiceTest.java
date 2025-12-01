@@ -48,7 +48,7 @@ public class UserServiceTest {
                 .email("test@example.com")
                 .build();
 
-        // [WHEN] 실제 회원가입 로직 실행
+        // [WHEN] 실제 회원가입 로직 실행 -> User 엔티티 반환
         User saved = userService.register(request);
 
         // [THEN] 결과 검증
@@ -125,5 +125,13 @@ public class UserServiceTest {
                 IllegalArgumentException.class,
                 () -> userService.register(req2)
         );
+        /* assertThrows(예상되는예외클래스, 실행할코드);
+            첫 번째 인자 : "어떤 예외가 발생해야 테스트가 성공하는지"
+                → 예: IllegalArgumentException.class
+            두 번째 인자 : "예외가 발생해야 하는 실제 실행 코드"
+                → () -> userService.register(req2)
+                 (람다식으로 감싸야 한다. 바로 호출하면 assertThrows가 감지할 수 없음)
+            ==> register(req2) 실행했을 때 IllegalArgumentException 발생하면 성공
+        */
     }
 }
