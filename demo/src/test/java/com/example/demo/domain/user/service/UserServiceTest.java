@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 // AssertJ의 assertThat 사용 (가독성 좋은 검증 코드 작성용)
 
 /*
@@ -91,7 +92,36 @@ public class UserServiceTest {
         userService.register(req1);
 
         //[THEN]
-        org.junit.jupiter.api.Assertions.assertThrows(
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.register(req2)
+        );
+    }
+
+    // Email 중복 실패 테스트
+    @Test
+    @DisplayName("회원가입 실패 : email 중복 시 예외 발생")
+    void register_fail_emailDuplicated(){
+        //[GIVEN]
+        UserSignupRequestDto req1 = UserSignupRequestDto.builder()
+                .username("testuserA1")
+                .password("Password123!")
+                .nickname("test닉네임A")
+                .email("same@example.com")
+                .build();
+
+        UserSignupRequestDto req2 = UserSignupRequestDto.builder()
+                .username("testuserB1")
+                .password("Password123!")
+                .nickname("test닉네임B")
+                .email("same@example.com") // email 중복
+                .build();
+
+        //[WHEN] 첫번째 정상 가입
+        userService.register(req1);
+
+        //[THEN] 두번째 가입은 예외 발생
+        assertThrows(
                 IllegalArgumentException.class,
                 () -> userService.register(req2)
         );
