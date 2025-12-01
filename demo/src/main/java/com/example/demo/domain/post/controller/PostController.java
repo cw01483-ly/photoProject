@@ -249,14 +249,14 @@ public class PostController {
                 // ⭐ 좋아요 개수 DTO를 ApiResponse로 감싸서 반환
         }
 
-    // 10. 테스트용 에러 발생 API (임시)
-    //    [GET] /posts/test/error
-    //    - 항상 IllegalArgumentException 을 발생시켜
-    //      GlobalExceptionHandler 가 제대로 동작하는지 확인하는 용도
+    /* 10. 테스트용 에러 발생 API (임시)
+             [GET] /posts/test/error
+             - 항상 IllegalArgumentException 을 발생시켜
+             GlobalExceptionHandler 가 제대로 동작하는지 확인하는 용도
     @GetMapping("/test/error")
     public void testError() {
         // 이 예외는 GlobalExceptionHandler 의
         // handleIllegalArgumentException 메서드에서 처리됨
         throw new IllegalArgumentException("테스트용 에러입니다.");
-    }
+    }*/
 }
