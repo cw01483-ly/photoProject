@@ -28,7 +28,7 @@ public class UserSignupRequestDto {
             regexp="^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{4,20}$",
             message = "ID는 영문+숫자 조합 4~20자이며, 특수문자는 사용 불가합니다."
     )
-    @Size(min = 4,max=20,message = "ID는 3 ~ 20자까지 가능합니다.")
+    @Size(min = 4,max=20,message = "ID는 4 ~ 20자까지 가능합니다.")
     //regexp : 정규 표현식(Regular Expression) = 문자규칙
     // +: 수량자(quantifier)로, 앞의 패턴([A-Za-z0-9])이 한 번 이상 반복되어야 함을 의미
             /*
