@@ -3,12 +3,14 @@ package com.example.demo.domain.user.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter // username,password에 대한 getter 자동생성
 @NoArgsConstructor // JSON > 객체변환
 @AllArgsConstructor // 모든 필드를 받는 자동 생성
+@Builder //UserServiceTest에서 사용하기 위해 빌더 사용
 //로그인 요청 데이터를 담는 Dto
 public class UserLoginRequestDto {
 
