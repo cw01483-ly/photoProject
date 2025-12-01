@@ -67,4 +67,33 @@ public class UserServiceTest {
         assertThat(found.getPassword()).isNotEqualTo("Password123!");
         assertThat(found.getPassword()).isNotBlank();// 암호화된 비밀번호가 존재해야 함
     }
+
+    //Username 중복시 실패 테스트
+    @Test
+    @DisplayName("회원가입 실패 : username 중복되면 예외 발생")
+    void register_fail_usernameDuplicated(){
+        //[GIVEN]
+        UserSignupRequestDto req1 = UserSignupRequestDto.builder()
+                .username("duplicateUser1")
+                .password("Password123!")
+                .nickname("닉네임1")
+                .email("email1@example.com")
+                .build();
+
+        UserSignupRequestDto req2 = UserSignupRequestDto.builder()
+                .username("duplicateUser1")
+                .password("Password123!")
+                .nickname("닉네임2")
+                .email("email2@example.com")
+                .build();
+
+        //[WHEN]
+        userService.register(req1);
+
+        //[THEN]
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.register(req2)
+        );
+    }
 }
