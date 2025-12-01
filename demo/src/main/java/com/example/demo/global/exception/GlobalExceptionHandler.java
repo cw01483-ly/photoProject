@@ -1,5 +1,6 @@
 package com.example.demo.global.exception;
 
+import com.example.demo.global.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,9 +24,11 @@ public class GlobalExceptionHandler {
     // 1) DTO 검증 실패 예외처리 (@Valid, @NotBlank, @Pattern, @Size 등)
     /**/
     @ExceptionHandler(MethodArgumentNotValidException.class)// 이 타입의 예외가 발생하면 이 메서드가 실행됨
-    public ResponseEntity<ErrorResponse> handleValidationException(
-            MethodArgumentNotValidException ex, // 발생한 예외객체(어떤 필드에서 어떤 에러가 났는지 정보 포함)
-            HttpServletRequest request // 어떤 요청 URL에서 에러가 났는지 알기위해 요청 정보도 함께 받음
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleValidationException(
+            MethodArgumentNotValidException ex,
+            // 발생한 예외객체(어떤 필드에서 어떤 에러가 났는지 정보 포함)
+            HttpServletRequest request
+            // 어떤 요청 URL에서 에러가 났는지 알기위해 요청 정보도 함께 받음
     ){
         // 1-1) 기본 에러 메시지를 미리 하나 정해놓음 ( 아래에서 구분 못하면 해당 메시지 사용)
         String errorMessage = "요청 값이 올바르지 않습니다.";
@@ -45,7 +48,8 @@ public class GlobalExceptionHandler {
         */
         log.warn("검증 실패 - path={}, message={}", request.getRequestURI(), errorMessage);
 
-        // 1-4) 클라이언트에게 돌려줄 에러 응답 객체(ErrorResponse) 만들기 -> 빌더 패턴 사용으로 가독성 ↑
+        // 1-4) 클라이언트에게 돌려줄 에러 응답 객체(ErrorResponse) 만들기
+        //      -> 빌더 패턴 사용으로 가독성 ↑
         ErrorResponse body = ErrorResponse.builder()
                 .success(false) // 성공여부 (false)
                 .status(HttpStatus.BAD_REQUEST.value()) // HTTP상태 코드 400
@@ -58,10 +62,13 @@ public class GlobalExceptionHandler {
             - HTTP 상태코드 : 400 Bad Request
             - 응답 바디 : 위에서 만든 ErrorResponse JSON
             형태로 클라이언트에게 반환
+            이제는 ErrorResponse를 그대로 반환하지 않고,
+               ApiResponse.fail(...)로 한 번 감싸서 공통 응답 포맷 유지
         */
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST) //응답 코드 400 설정
-                .body(body);                    // body에 ErrorResponse 객체를 담아 반환 -> JSON으로 변환되어 나감.
+                .body(ApiResponse.fail(body, errorMessage));
+        // body에 ErrorResponse 객체를 담아 ApiResponse 포맷으로 반환 -> JSON으로 변환되어 나감.
     }
 
     /* 2) IllegalArgumentException 처리 메서드
@@ -69,7 +76,7 @@ public class GlobalExceptionHandler {
         - 이 메서드가 그 예외를 잡아 400코드 + 예외메시지(JSON) 형식으로 응답
     */
     @ExceptionHandler(IllegalArgumentException.class) //IllegalArgumentException 발생 시 이 메서드 실행
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleIllegalArgumentException(
             IllegalArgumentException ex, //발생한 예외 객체( 예 : ex.getMessage() )
             HttpServletRequest request   // 요청 정보
     ){
@@ -85,17 +92,18 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())           // 에러가 발생한 요청 경로
                 .timestamp(LocalDateTime.now())          // 현재 시간
                 .build();
-        // 2-3) 400 상태코드와 함께 ErrorResponse를 응답으로 반환
+        // 2-3) 400 상태코드와 함께 ErrorResponse를 응답으로 반환,
+        // ApiResponse.fail(...)로 감싸 공통 포맷 유지
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(body);
+                .body(ApiResponse.fail(body, ex.getMessage()));
     }
 
     /* 3) 그 외 처리하지 않은 모든 예외 처리 메서드
         - 위에서 지정한 예외를 제외한 나머지 예외들인 경우 해당 메서드 사용
     */
     @ExceptionHandler(Exception.class) //최상위 예외타입.
-    public ResponseEntity<ErrorResponse> handleException(
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleException(
             Exception ex,
             HttpServletRequest request){
         // 3-1) 서버 내부 오류는 error 레벨로 로그 남기기, 추적가능하게
@@ -113,10 +121,10 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        // 3-3) 500 상태코드로 응답 보내기
+        // 3-3) 500 상태코드로 응답 보내기,  ApiResponse.fail(...)로 감싸서 실패 응답도 공통 포맷 사용
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(body);
+                .body(ApiResponse.fail(body, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
     }
 
     // 공통 에러 응답 포맷 클래스 -> 이 클래스를 JSON으로 변환 후 클라이언트에게 송출
