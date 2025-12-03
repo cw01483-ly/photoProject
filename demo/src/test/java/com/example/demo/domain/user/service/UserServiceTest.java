@@ -195,6 +195,23 @@ public class UserServiceTest {
         assertThrows( //assertThrows : 특정 코드 실행 시 [예외 발생해야 한다]는 것을 검증
                 IllegalArgumentException.class, // 예외타입
                         ()-> userService.login(wrongPwLoginRequest)); // 실제 실행할 코드
+    }
 
+    // ⭐ 로그인 실패 테스트 ( username이 존재하지 않을 때 )
+    @Test
+    @DisplayName("로그인 실패 : username 없으면 예외 발생")
+    void login_fail_userNotFound(){
+        // [GIVEN] 존재하지 않는 username 사용하여 로그인 요청 DTO 생성
+        UserLoginRequestDto request = UserLoginRequestDto.builder()
+                .username("no_such_user1")// DB에 존재하지 않는 username 사용
+                .password("SomePassword1!")// 비밀번호는 의미 없음
+                .build();
+        /* [WHEN & THEN]
+            userService.login(request)를 실행할 때
+            IllegalArgumentException 이 발생하면 테스트 성공
+        */
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.login(request));
     }
 }
