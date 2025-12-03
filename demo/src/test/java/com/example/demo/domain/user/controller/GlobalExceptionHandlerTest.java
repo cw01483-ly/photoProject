@@ -27,6 +27,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         GlobalExceptionHandler.handleIllegalArgumentException() 이 이를 잡아서
         HTTP 400 + ApiResponse<ErrorResponse> JSON 응답을 보내는지 검증.
 */
+
+/*  GlobalExceptionHandler 테스트
+    1) 로그인 실패 - 비밀번호 불일치
+    2) 회원가입 실패 - DTO 검증 실패(@Valid)
+*/
 @SpringBootTest // 스프링부트 실제 환경 테스트
 @AutoConfigureMockMvc /* MockMvc 자동 생성
 Spring MVC 애플리케이션의 컨트롤러(Controller) 계층을 실제 HTTP 요청 없이 테스트*/
@@ -43,7 +48,8 @@ public class GlobalExceptionHandlerTest {
     @Autowired
     private UserService userService; // 회원가입 테스트 준비
 
-    @Test@DisplayName("로그인 실패 : 비밀번호 불일치 시 400과 에러 응답 반환")
+    @Test // ⭐ 비밀번호 불일치 시 에러응답 테스트
+    @DisplayName("로그인 실패 : 비밀번호 불일치 시 400과 에러 응답 반환")
     void login_fail_wrongPw_returnBadRequest() throws Exception{
 
         // [GIVEN] 1) 정상 회원가입
@@ -98,4 +104,44 @@ public class GlobalExceptionHandlerTest {
 
                 */
     }
+
+    @Test // ⭐ 회원가입 검증 실패테스트
+    @DisplayName("회원가입 실패 : DTO 검증 실패 시 400과 에러 응답 반환")
+    void singup_fail_validation_returnBadRequest() throws Exception{
+
+        // [GIVEN] 1) 잘못된 회원가입 요청 DTO
+        UserSignupRequestDto invalidSignupRequest = UserSignupRequestDto.builder()
+                .username("") //빈 문자열 @NotBlank검증
+                .password("pw") // @Size 검증
+                .nickname("") // 공백검증
+                .email("not-an-email") // @Email 형식 검증
+                .build();
+
+        // 2) DTO -> JSON 문자열 반환
+        String requestJson = objectMapper.writeValueAsString(invalidSignupRequest);
+
+        // [WHEN & THEN]
+        // 회원가입 엔드포인트는 @RequestMapping("/api/users") + @PostMapping(빈 문자열)
+        // -> 실제 URL = POST /api/users
+        mockMvc.perform(
+                post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        // ↑ 지금 보내는 요청 바디는 JSON임을 선언
+                        .content(requestJson)
+                        // ↑ HTTP 요청의 Body 부분
+        )
+                // 검사1)상태코드 400(MethodArgumentNotValidException -> handleValidationException)
+                .andExpect(status().isBadRequest())
+                // 검사2)공통 응답 포맷 상 success == false
+                .andExpect(jsonPath("$.success").value(false))
+                // 검사3)에러 메시지 존재하는지만 확인(구체 문구는 DTO 설정에 따라 달라질 수 있음)
+                .andExpect(jsonPath("$.message").exists())
+                // 검사4)data(ErrorResponse) 객체가 존재
+                .andExpect(jsonPath("$.data").exists())
+                // 검사5) ErrorResponse 내부 status == 400
+                .andExpect(jsonPath("$.data.status").value(400))
+                // 검사6) ErrorResponse 내부 path == "/api/users"
+                .andExpect(jsonPath("$.data.path").value("/api/users"));
+    }
+    
 }
