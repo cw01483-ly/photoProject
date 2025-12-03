@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -213,5 +214,36 @@ public class UserServiceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> userService.login(request));
+    }
+
+    // ⭐ 사용자 조회 테스트
+    @Test
+    @DisplayName("사용자 조회 성공 : 존재하는 ID로 조회 시 User 반환")
+    @WithMockUser(username = "finduser1", roles = {"ADMIN"}) // 가상의 인증된 사용자 정보 주입
+    void getById_success(){
+        // [GIVEN] 1) 테스트용 유저 1명 생성
+        UserSignupRequestDto request = UserSignupRequestDto.builder()
+                .username("findUser1")
+                .password("Password123!")
+                .nickname("닉네임설정")
+                .email("example@example.com")
+                .build();
+
+        // userService.register() 호출 -> User 엔티티 DB 저장
+        User saved = userService.register(request);
+
+        // saved.getId() 는 DB PK값 -> 실제 findById 테스트에 사용할 ID
+        Long saveId = saved.getId();
+
+        // [WHEN] 2) getById 호출
+        User found = userService.getById(saveId);
+
+        // [THEN] 3) 반환된 User 엔티티 검증
+        assertThat(found).isNotNull();// 3-1) 존재 해야함
+        assertThat(found.getId()).isEqualTo(saveId); // 3-2) 조회된 PK 동일한지 확인
+        assertThat(found.getUsername()).isEqualTo("finduser1");
+        // ↑ 3-3) username 그대로 나오는지 확인, trim() 직접 설정
+        assertThat(found.getEmail()).isEqualTo("example@example.com"); // 3-4) 메일 일치 확인
+        assertThat(found.getNickname()).isEqualTo("닉네임설정"); // 3-5 닉네임 일치 확인
     }
 }

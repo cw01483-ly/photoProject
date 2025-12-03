@@ -143,5 +143,4 @@ public class GlobalExceptionHandlerTest {
                 // 검사6) ErrorResponse 내부 path == "/api/users"
                 .andExpect(jsonPath("$.data.path").value("/api/users"));
     }
-    
 }
