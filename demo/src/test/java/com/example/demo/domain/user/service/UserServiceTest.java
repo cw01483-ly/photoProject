@@ -262,4 +262,40 @@ public class UserServiceTest {
                 EntityNotFoundException.class, //예상되는 예외 타입
                 () -> userService.getById(invalidId)); // 실행할 코드
     }
+
+    // ⭐ 닉네임 업데이트 성공 테스트
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    // @PreAuthorize("hasRole('ADMIN') or #id == principal.id") 통과용 가짜 인증 사용자 (ADMIN 권한 부여)
+    @Test
+    @DisplayName("닉네임 업데이트 성공 : 유효한 새 닉네임으로 수정 시 반영")
+    void updateNickname_success(){
+        // [GIVEN] 초기 닉네임 유저 생성
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username("nickUser1")
+                .password("Password123!")
+                .nickname("기본닉네임")
+                .email("example@example.com")
+                .build();
+
+        User saved = userService.register(signupRequest); // DB에 User엔티티 저장
+
+        Long userId = saved.getId(); // 업데이트에 사용할 PK
+
+        // [WHEN] 2) 닉네임 업데이트 서비스 호출
+        String newNickname = "새로운닉네임";
+        User updated = userService.updateNickname(userId,newNickname);
+        /* updateNickname 내부에서 getById() 로 유저조회, 중복검사,
+            user.changeNickname() 호출하여 엔티티 상태 변경*/
+
+        // [THEN] 3) 반환된 User와 DB 상태 검증
+        assertThat(updated).isNotNull(); // 3-1) null 이 아니어야 함
+        assertThat(updated.getId()).isEqualTo(userId); // 3-2) 같은 사용자여야 함
+        // 3-3) 닉네임이 새 값으로 변경되었는지 확인
+        assertThat(updated.getNickname()).isEqualTo(newNickname);
+
+        // DB에서 다시 조회 ( 재확인, 신뢰도 향상 )
+        User found = userService.getById(userId);
+        assertThat(found.getNickname()).isEqualTo(newNickname);
+    }
+
 }
