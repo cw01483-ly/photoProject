@@ -298,4 +298,41 @@ public class UserServiceTest {
         assertThat(found.getNickname()).isEqualTo(newNickname);
     }
 
+
+    // ⭐ 닉네임 수정 실패 테스트 (중복 닉네임)
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    // ADMIN 권한이므로 @PreAuthorize 조건을 통과할 수 있게 설정
+    @Test
+    @DisplayName("닉네임 수정 실패 : 이미 사용 중인 닉네임으로 변경 시 예외 발생")
+    void updateNickname_fail_duplicateNickname() {
+        // [GIVEN] 1) 서로 다른 닉네임을 가진 유저 2명 생성
+        UserSignupRequestDto user1Request = UserSignupRequestDto.builder()
+                .username("dupNickUser1")
+                .password("Password123!")
+                .nickname("닉네임1")
+                .email("dup1@example.com")
+                .build();
+
+        UserSignupRequestDto user2Request = UserSignupRequestDto.builder()
+                .username("dupNickUser2")
+                .password("Password123!")
+                .nickname("닉네임2")
+                .email("dup2@example.com")
+                .build();
+
+        User user1 = userService.register(user1Request); // 닉네임 "닉네임1"
+        User user2 = userService.register(user2Request); // 닉네임 "닉네임2"
+
+        Long targetId = user2.getId(); // 닉네임을 바꿀 대상 유저 (현재 닉네임2 보유)
+
+        /* [WHEN & THEN]
+         user2의 닉네임을 user1의 닉네임("닉네임1")으로 바꾸려고 하면
+         UserService.updateNickname 내부에서
+          - findByNickname("닉네임1") 으로 다른 사용자 발견
+          - conflict.getId() != id 조건을 만족하여 IllegalStateException 을 던져야 함.*/
+        assertThrows(
+                IllegalStateException.class,  // 예상 예외 타입
+                () -> userService.updateNickname(targetId, "닉네임1") // 실행할 코드 (람다식)
+        );
+    }
 }
