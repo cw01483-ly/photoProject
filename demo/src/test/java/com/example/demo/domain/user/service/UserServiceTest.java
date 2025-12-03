@@ -4,6 +4,7 @@ import com.example.demo.domain.user.dto.UserLoginRequestDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 // 테스트 이름(한글 설명)을 붙일 때 사용하는 어노테이션
 import org.junit.jupiter.api.Test;
@@ -245,5 +246,20 @@ public class UserServiceTest {
         // ↑ 3-3) username 그대로 나오는지 확인, trim() 직접 설정
         assertThat(found.getEmail()).isEqualTo("example@example.com"); // 3-4) 메일 일치 확인
         assertThat(found.getNickname()).isEqualTo("닉네임설정"); // 3-5 닉네임 일치 확인
+    }
+
+    // ⭐ 사용자 조회 실패 테스트
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    @Test
+    @DisplayName("사용자 조회 실패 : 존재하지 않는 ID 조회 시 예외 발생")
+    void getById_fail_userNotFound(){
+
+        //[GIVEN] 존재하지 않는 사용자 ID 준비
+        Long invalidId = 999999L; // 실제 DB에 존재 할 가능성 거의 없는 큰 값 사용
+
+        // [WHEN & THEN] getById(invalidId) 실행 시 EntityFoundException 발생
+        assertThrows(
+                EntityNotFoundException.class, //예상되는 예외 타입
+                () -> userService.getById(invalidId)); // 실행할 코드
     }
 }
