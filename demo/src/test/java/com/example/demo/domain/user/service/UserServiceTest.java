@@ -40,7 +40,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("회원가입 성공 : 올바른 값이면 User가 저장되고, 비밀번호는 암호화")
         // 테스트 실행 창에서 한글로 보이게
-    // 회원가입 테스트
+    // ⭐ 회원가입 테스트
     void register_success(){
         // [GIVEN] 테스트에 사용할 입력값 준비
         UserSignupRequestDto request = UserSignupRequestDto.builder()
@@ -71,7 +71,7 @@ public class UserServiceTest {
         assertThat(found.getPassword()).isNotBlank();// 암호화된 비밀번호가 존재해야 함
     }
 
-    // Username 중복시 실패 테스트
+    // ⭐ Username 중복시 실패 테스트
     @Test
     @DisplayName("회원가입 실패 : username 중복되면 예외 발생")
     void register_fail_usernameDuplicated(){
@@ -100,7 +100,7 @@ public class UserServiceTest {
         );
     }
 
-    // Email 중복 실패 테스트
+    // ⭐ Email 중복 실패 테스트
     @Test
     @DisplayName("회원가입 실패 : email 중복 시 예외 발생")
     void register_fail_emailDuplicated(){
@@ -137,7 +137,7 @@ public class UserServiceTest {
         */
     }
 
-    // 로그인 성공 테스트
+    // ⭐ 로그인 성공 테스트
     @Test
     @DisplayName("로그인 성공 : 올바른 username,password로 로그인 시 UserResponseDto 반환")
     void login_success(){
@@ -169,5 +169,32 @@ public class UserServiceTest {
                 .orElseThrow(() -> new IllegalStateException("로그인 유저를 찾지 못했습니다."));
 
         assertThat(found.getLastLoginAt()).isNotNull();
+    }
+
+    // ⭐ 로그인 실패 테스트 ( 비밀번호 불일치 )
+    @Test
+    @DisplayName("로그인 실패 : 비밀번호 틀리면 예외 발생")
+    void login_fail_wrongPw(){
+        // [GIVEN] 1) 정상 회원 생성
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username("loginUser1")
+                .password("CorrectPassword1!")
+                .nickname("로그인실패유저")
+                .email("login1@example.com")
+                .build();
+
+        userService.register(signupRequest); // 회원가입 -> DB저장 +Pw암호화
+
+        // 2) 로그인 요청 DTO를 "틀린 Pw"로 만들기
+        UserLoginRequestDto wrongPwLoginRequest = UserLoginRequestDto.builder()
+                .username("loginUser1")
+                .password("WorngPassword1!")
+                .build(); // DTO 생성 완료
+
+        // [WHEN & THEN], 틀린 비밀번호 로그인 시도 시 예외 발생
+        assertThrows( //assertThrows : 특정 코드 실행 시 [예외 발생해야 한다]는 것을 검증
+                IllegalArgumentException.class, // 예외타입
+                        ()-> userService.login(wrongPwLoginRequest)); // 실제 실행할 코드
+
     }
 }
