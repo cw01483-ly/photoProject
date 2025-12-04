@@ -62,5 +62,40 @@ public class UserControllerTest {
           추가로 확인하고 싶을 때 사용
      */
 
+    // ⭐ 회원가입 성공 테스트 (POST /api/users)
+    @Test
+    @DisplayName("회원가입 성공 : 올바른 요청 JSON 보내면 201과 UserResponseDto 반환")
+    void register_success() throws Exception {
+        // [GIVEN] 회원가입 요청 DTO 생성
+        UserSignupRequestDto requestDto = UserSignupRequestDto.builder()
+                .username("controller1")
+                .password("Password1@")
+                .nickname("닉네임1")
+                .email("example@example.com")
+                .build();
 
+        // DTO -> JSON 문자열 변환
+        String json = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN] MockMvc를 사용해 Post /api/users 요청 전송
+        var resultAction = mockMvc.perform(
+                post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON) // 요청 본문 타입 application/json
+                        .content(json)); // JSON본문
+
+        // [THEN] HTTP 응답 코드 및 응답 JSON 구조 검증
+        resultAction
+                .andExpect(status().isCreated())// 201 Created 이어야 함 (ResponseEntity.created(...) 사용)
+                // ApiResponse 구조: { "success": true, "data": { ... }, "message": "회원가입 성공" }
+                .andExpect(jsonPath("$.success").value(true))  // success 필드 true
+                .andExpect(jsonPath("$.message").value("회원가입 성공"))// 메시지 검증
+                .andExpect(jsonPath("$.data.username").value("controller1"))
+                // username 소문자 변환 가정
+                .andExpect(jsonPath("$.data.email").value("example@example.com"))
+                .andExpect(jsonPath("$.data.nickname").value("닉네임1"));
+
+        // 추가 검증 ) DB에 해당 사용자 저장되었는지 확인
+        boolean exists = userRepository.findByUsername("controller1").isPresent();
+        assertThat(exists).isTrue(); //DB에 유저 존재해야 테스트 성공
+    }
 }
