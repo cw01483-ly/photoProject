@@ -366,4 +366,41 @@ public class UserServiceTest {
         User found = userService.getById(userId);
         assertThat(found.getEmail()).isEqualTo(newEmail);
     }
+
+
+    // ⭐ 이메일 업데이트 실패 테스트 (중복 이메일)
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    @Test
+    @DisplayName("이메일 업데이트 실패 : 사용중인 이메일로 변경 시 예외 발생")
+    void updateEmail_fail_duplicateEmail(){
+        // [GIVEN] 1) 서로 다른 이메일 가진 사용자 2명 생성
+        UserSignupRequestDto user1Request = UserSignupRequestDto.builder()
+                .username("dupEmailUser1")
+                .password("Password123!")
+                .nickname("이메일닉1")
+                .email("dupEmail1@example.com")
+                .build();
+
+        UserSignupRequestDto user2Request = UserSignupRequestDto.builder()
+                .username("dupEmailUser2")
+                .password("Password123!")
+                .nickname("이메일닉2")
+                .email("dupEmail2@example.com")
+                .build();
+
+        User user1 = userService.register(user1Request);
+        User user2 = userService.register(user2Request);
+
+        Long targetId = user2.getId(); // 이메일 바꿀 사용자
+
+        /* [WHEN & THEN]
+            user2의 이메일을 user1의 이메일로 변경하려 하면 UserService.updateEmail 내부에서
+                findByEmail() 으로 다른 사용자 발견
+                    -> conflict.getId() != id 조건을 만족, 예외 발생
+        */
+        assertThrows(
+                IllegalStateException.class, //예상 예외 타입
+                () -> userService.updateEmail(targetId, "dupEmail1@example.com")// 실행 할 코드
+        );
+    }
 }
