@@ -421,4 +421,30 @@ public class UserServiceTest {
                 EntityNotFoundException.class, // 예상 예외 타입
                 () -> userService.delete(invalidId)); // 실제 실행 코드
     }
+
+
+    // ⭐ 회원 삭제 성공 테스트
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    // ADMIN 권한의 가짜 사용자로 인증 -> 삭제 권한 보장
+    @Test
+    @DisplayName("회원 삭제 성공 : 존재하는 ID 삭제 시 DB에서 제거")
+    void deleteUser_success() {
+        // [GIVEN] 1) 테스트용 사용자 한 명 생성 및 저장
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username("deleteUser1")          // 삭제 대상 username
+                .password("Password123!")         // 임의 비밀번호
+                .nickname("삭제대상유저")          // 닉네임
+                .email("delete1@example.com")     // 이메일
+                .build();
+
+        User saved = userService.register(signupRequest); // 회원가입 -> DB에 User 엔티티 저장
+        Long userId = saved.getId(); // 이후 삭제에 사용할 PK 값
+
+        // [WHEN] 2) userService.delete 호출로 회원 삭제 시도
+        userService.delete(userId);
+
+        // [THEN] 3) userRepository로 다시 조회했을 때 존재하지 않아야 함
+        boolean exists = userRepository.findById(userId).isPresent(); // Optional이 비어 있는지 여부 확인
+        assertThat(exists).isFalse(); // 삭제 후에는 반드시 false 여야 함 (DB에서 제거됨)
+    }
 }
