@@ -403,4 +403,22 @@ public class UserServiceTest {
                 () -> userService.updateEmail(targetId, "dupEmail1@example.com")// 실행 할 코드
         );
     }
+
+
+    // ⭐ 존재하지 않는 사용자 삭제 실패 테스트
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @Test
+    @DisplayName("회원 삭제 실패 : 존재하지 않는 ID 삭제 시 예외 발생")
+    void deleteUser_fail_userNotFound(){
+        // [GIVEN] 실제 DB에 존재하지 않는 사용자 ID 준비
+        Long invalidId = 99999999L;
+
+        /* [WHEN & THEN]
+            존재하지 않는 ID로 userService.delete(invalidId)를 호출시
+            내부에서 getById(invalidId)실행 >> EntitiyNotFoundException 발생
+        */
+        assertThrows(
+                EntityNotFoundException.class, // 예상 예외 타입
+                () -> userService.delete(invalidId)); // 실제 실행 코드
+    }
 }
