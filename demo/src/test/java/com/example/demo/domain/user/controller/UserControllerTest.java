@@ -10,9 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.boot.test.context.SpringBootTest;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 // 응답 본문 파싱 후 값 검증용 (AssertJ)
@@ -62,6 +63,9 @@ public class UserControllerTest {
           추가로 확인하고 싶을 때 사용
      */
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // ⭐ 회원가입 성공 테스트 (POST /api/users)
     @Test
     @DisplayName("회원가입 성공 : 올바른 요청 JSON 보내면 201과 UserResponseDto 반환")
@@ -98,4 +102,64 @@ public class UserControllerTest {
         boolean exists = userRepository.findByUsername("controller1").isPresent();
         assertThat(exists).isTrue(); //DB에 유저 존재해야 테스트 성공
     }
+
+
+
+    // ⭐ 로그인 성공 테스트 (POST /api/users/login)
+    @Test
+    @DisplayName("로그인 성공 : 올바른 username,pw 로그인 시 200과 UserResponseDto 반환")
+    void login_success() throws Exception {
+        // [GIVEN] 1) 회원가입으로 유저 생성
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username("loginuser1")
+                .password("Password123!")
+                .nickname("닉네임1")
+                .email("example@example.com")
+                .build();
+
+        // 평문 비밀번호 인코딩
+        String rawPw = signupRequest.getPassword();
+        String encodedPw = passwordEncoder.encode(rawPw); //인코딩
+
+        // 서비스 레이어 호출하여 가입처리 (DB저장)
+        var savedUser = userRepository.save(
+                com.example.demo.domain.user.entity.User.builder()
+                        .username(signupRequest.getUsername().toLowerCase().trim()) // 서비스 로직과 동일하게 표준화 가정
+                        .password(encodedPw)
+                        .nickname(signupRequest.getNickname())
+                        .email(signupRequest.getEmail().toLowerCase().trim())
+                        .build()
+        );
+
+        // 2) 로그인 요청 DTO 생성 (username + 평문 pw)
+        UserLoginRequestDto loginRequest = UserLoginRequestDto.builder()
+                .username("loginuser1")
+                .password("Password123!")
+                .build();
+        // DTO -> JSON 문자열 변환
+        String loginJson = objectMapper.writeValueAsString(loginRequest);
+
+        // [WHEN] POST /api/users/login 요청 전송
+        var resultAction = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson));
+
+        // [THEN] 응답 상태 및 JSON 내용 검증
+        resultAction
+                .andExpect(status().isOk()) // 200 OK
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("로그인 성공"))
+                .andExpect(jsonPath("$.data.username").value("loginuser1"))
+                .andExpect(jsonPath("$.data.email").value("example@example.com"))
+                .andExpect(jsonPath("$.data.nickname").value("닉네임1"));
+    }
+
+    /*
+        ※ 추후 확장
+        - 회원가입 실패 : 잘못된 이메일 형식 / 공백 username 등 → 400 + GlobalExceptionHandler 응답 구조 검증
+        - 단일 조회(GET /api/users/{id}) : ADMIN 또는 본인일 때 200, 타인일 때 403
+        - 닉네임/이메일 수정 PATCH API : 성공/실패, 권한(본인/관리자) 체크
+        - 삭제 DELETE /api/users/{id} : 성공 케이스, 없는 ID → 404, 권한 없는 사용자 → 403
+     */
 }
