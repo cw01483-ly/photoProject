@@ -107,7 +107,7 @@ public class GlobalExceptionHandlerTest {
 
     @Test // ⭐ 회원가입 검증 실패테스트
     @DisplayName("회원가입 실패 : DTO 검증 실패 시 400과 에러 응답 반환")
-    void singup_fail_validation_returnBadRequest() throws Exception{
+    void signup_fail_validation_returnBadRequest() throws Exception{
 
         // [GIVEN] 1) 잘못된 회원가입 요청 DTO
         UserSignupRequestDto invalidSignupRequest = UserSignupRequestDto.builder()
