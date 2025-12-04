@@ -1,4 +1,4 @@
-package com.example.demo.domain.global;
+package com.example.demo.global.exception;
 
 
 import com.example.demo.domain.user.dto.UserLoginRequestDto;
