@@ -335,4 +335,35 @@ public class UserServiceTest {
                 () -> userService.updateNickname(targetId, "닉네임1") // 실행할 코드 (람다식)
         );
     }
+
+
+    // ⭐ 이메일 업데이트 성공 테스트
+    @WithMockUser(username = "adminuser", roles = {"ADMIN"})
+    @Test
+    @DisplayName("이메일 업테이트 성공 : 유효한 새 이메일 수정 시 반영")
+    void updateEmail_success(){
+        // [GIVEN] 1) 초기 사용자 생성
+        UserSignupRequestDto signupRequest = UserSignupRequestDto.builder()
+                .username("emailUser1")
+                .password("Password123!")
+                .nickname("이메일유저")
+                .email("before@example.com")
+                .build();
+
+        User saved = userService.register(signupRequest); // DB에 User 엔티티 저장
+        Long userId = saved.getId(); // 이메일업데이트 에 사용할 PK
+
+        // [WHEN] 2) 이메일 업데이트 서비스 호출
+        String newEmail = "new@example.com"; // 변경할 이메일
+        User updated = userService.updateEmail(userId, newEmail);
+
+        // [THEN] 3) 변환된 User와 DB 상태 검증
+        assertThat(updated).isNotNull(); // 3-1) null X
+        assertThat(updated.getId()).isEqualTo(userId); // 3-2) 같은 사용자인지
+        assertThat(updated.getEmail()).isEqualTo(newEmail); // 3-3) 이메일이 새 값으로 변경되었는지 확인
+
+        // DB에서 다시 조회, 반영 여부 재확인
+        User found = userService.getById(userId);
+        assertThat(found.getEmail()).isEqualTo(newEmail);
+    }
 }
