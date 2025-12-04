@@ -1,4 +1,4 @@
-package com.example.demo.domain.user.controller;
+package com.example.demo.domain.global;
 
 
 import com.example.demo.domain.user.dto.UserLoginRequestDto;
