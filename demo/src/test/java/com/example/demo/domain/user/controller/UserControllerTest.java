@@ -13,6 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.demo.domain.user.entity.User;
+import org.springframework.security.test.context.support.WithMockUser; // @WithMockUser
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get; // get() 헬퍼
+
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -162,4 +166,36 @@ public class UserControllerTest {
         - 닉네임/이메일 수정 PATCH API : 성공/실패, 권한(본인/관리자) 체크
         - 삭제 DELETE /api/users/{id} : 성공 케이스, 없는 ID → 404, 권한 없는 사용자 → 403
      */
+
+
+    // ⭐ 단일조회 성공 테스트
+    @Test
+    @DisplayName("단일 조회 성공 : 관리자 GET /api/users/{id} 호출 시 200과 UserResponseDto 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void getUserById_success_asAdmin() throws Exception {
+        // [GIVEN] 조회 대상 사용자 1명 DB 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("getbyiduser1")
+                        .password(passwordEncoder.encode("Password123!"))
+                        .nickname("조회대상")
+                        .email("example@example.net")
+                        .build()
+        );
+
+        // [WHEN] GET /api/users/{id} 요청 전송 (관리자 권한)
+        var  resultAction = mockMvc.perform(
+                get("/api/users/{id}", user.getId())
+                        .accept(MediaType.APPLICATION_JSON));
+
+        // [THEN] 응답 코드 및 JSON 내용 검증
+        resultAction
+                .andExpect(status().isOk()) // 200 OK
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("단일 사용자 조회 성공"))
+                .andExpect(jsonPath("$.data.id").value(user.getId().intValue()))
+                .andExpect(jsonPath("$.data.username").value("getbyiduser1"))
+                .andExpect(jsonPath("$.data.email").value("example@example.net"))
+                .andExpect(jsonPath("$.data.nickname").value("조회대상"));
+    }
 }
