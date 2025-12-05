@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import jakarta.persistence.EntityNotFoundException;
+
 
 import java.time.LocalDateTime;
 
@@ -125,6 +127,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail(body, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
+    }
+
+    /* 4) 엔티티(사용자 등)를 찾지 못했을 때 404로 응답하는 예외 처리
+        - UserService.getById(id) 에서 new EntityNotFoundException(...) 을 던지는 경우
+        - ex) 삭제/조회 시 존재하지 않는 ID를 요청했을 때
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleEntityNotFoundException(
+            EntityNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        // 4-1) 경고 로그로 남기기 (어떤 경로에서 어떤 메시지로 404가 났는지)
+        log.warn("리소스 조회 실패 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        // 4-2) 클라이언트에게 내려줄 에러 응답 본문 생성
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)                          // 실패
+                .status(HttpStatus.NOT_FOUND.value())    // 404
+                .message(ex.getMessage())                // "User not found. id = 999999" 등
+                .path(request.getRequestURI())           // 에러 발생 경로
+                .timestamp(LocalDateTime.now())          // 발생 시각
+                .build();
+
+        // 4-3) 404 상태코드와 함께 공통 포맷(ApiResponse.fail)으로 감싸서 반환
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail(body, ex.getMessage()));
     }
 
     // 공통 에러 응답 포맷 클래스 -> 이 클래스를 JSON으로 변환 후 클라이언트에게 송출
