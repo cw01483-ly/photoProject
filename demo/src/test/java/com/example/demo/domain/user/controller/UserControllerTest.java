@@ -18,7 +18,7 @@ import org.springframework.security.test.context.support.WithMockUser; // @WithM
 import java.util.Map;// Map.of 사용
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get; // get() 헬퍼
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch; // patch() 헬퍼
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete; // delete() 헬퍼
 
 import static org.assertj.core.api.Assertions.assertThat;
 // 응답 본문 파싱 후 값 검증용 (AssertJ)
@@ -369,5 +369,38 @@ public class UserControllerTest {
         User updated = userRepository.findById(user.getId()).orElseThrow();
         // DB에서 다시 조회했을 때 email 필드가 "new@example.com" 으로 저장되어야 함.
         assertThat(updated.getEmail()).isEqualTo("new@example.com");
+    }
+
+
+    // ⭐ 회원 삭제 테스트 (DELETE /api/users/{id}) - 관리자 권한 성공 케이스
+    @Test
+    @DisplayName("회원 삭제 성공 : 관리자가 DELETE /api/users/{id} 호출 시 200과 '회원 삭제 성공' 메시지 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void deleteUser_success_asAdmin() throws Exception {
+        // [GIVEN] 1) 삭제 대상 사용자 1명을 DB에 저장해둔다.
+        User user = userRepository.save(
+                User.builder()
+                        .username("deleteuser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("삭제대상닉네임")
+                        .email("delete@example.com")
+                        .build()
+        );
+        Long id = user.getId(); // 삭제 대상의 PK값
+
+        // [WHEN] 2) 관리자 권한으로 DELETE /api/users/{id} 요청 전송
+        var resultAction = mockMvc.perform(
+                delete("/api/users/{id}", id) // DELETE /api/users/{id}
+        ).andDo(print());
+
+        // [THEN] 3) 응답 상태 코드와 JSON 응답 본문 검증
+        resultAction
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("회원 삭제 성공"));
+
+        // [THEN] 4) DB에서 해당 사용자 삭제 되었는지 2차 검증
+        boolean exists = userRepository.findById(id).isPresent();
+        assertThat(exists).isFalse();// 삭제 후 findById(id) 값이 비어있어야함
     }
 }
