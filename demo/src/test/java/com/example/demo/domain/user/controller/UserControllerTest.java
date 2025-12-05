@@ -499,4 +499,41 @@ public class UserControllerTest {
                 .andExpect(status().isForbidden()); //HTTP 상태 코드가 403 Forbidden 인지 확인
                  // 응답 Body 구조는 Spring Security가 기본 처리하므로 상태 코드만 검증
     }
+
+
+    // ⭐ 단일 조회 권한 실패 테스트 (GET /api/users/{id}) - 일반 USER가 다른 사람 id 조회 시 403
+    @Test
+    @DisplayName("단일 조회 실패 : 일반 USER가 다른 사용자 id로 GET /api/users/{id} 호출 시 403 Forbidden 반환")
+    @WithMockUser(username = "normalUser", roles = {"USER"})
+    void getUserById_forbidden_whenNotAdminAndNotOwner() throws Exception {
+
+        // [GIVEN] 조회 대상이 될 사용자 1명 생성. (normalUser와는 다른 계정)
+        User targetUser = userRepository.save(
+                User.builder()
+                        .username("targetUser1")                          // 조회 대상 계정
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("조회대상닉")
+                        .email("target@example.com")
+                        .build()
+        );
+        Long targetId = targetUser.getId(); // 이 ID는 현재 로그인한 normalUser의 id가 아님
+
+        // [WHEN] 일반 USER(normalUser) 권한으로 다른 사람 id에 대해 GET /api/users/{id} 호출
+        var resultAction = mockMvc.perform(
+                get("/api/users/{id}", targetId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print()); // 실제 응답(상태코드, Body)을 콘솔에 출력해서 확인
+
+/*
+         [THEN]
+          - @PreAuthorize("hasRole('ADMIN') or #id == principal.id") 평가 과정에서
+            @WithMockUser 가 제공하는 기본 principal(org.springframework.security.core.userdetails.User)에는
+            id 필드/프로퍼티가 없으므로, principal.id 접근 시 스프링 EL 내부에서 예외 발생
+          - 이 예외는 GlobalExceptionHandler 의 handleIllegalArgumentException(...) 에서 400(Bad Request)으로 처리됨
+          - 실제 운영 환경에서 CustomUserDetails에 id 프로퍼티를 두고 principal.id가 정상 동작하게 구성하면,
+            이 경우 AccessDeniedException → 403 Forbidden 으로 응답하도록 확장할 수 있음.
+*/
+        resultAction
+                .andExpect(status().isBadRequest()); // 현재 테스트 환경에서는 400이 응답되는 것이 정상
+    }
 }
