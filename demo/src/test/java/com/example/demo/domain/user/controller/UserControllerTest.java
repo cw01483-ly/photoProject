@@ -325,4 +325,49 @@ public class UserControllerTest {
         // DB에서 다시 조회했을 때 닉네임이 "새닉네임" 으로 저장되어 있어야 한다.
         assertThat(updated.getNickname()).isEqualTo("새닉네임");
     }
+
+
+    // ⭐ 이메일 수정 테스트 (PATCH /api/users/{id}/email) - 관리자 권한 성공 케이스
+    @Test
+    @DisplayName("이메일 수정 성공 : 관리자가 PATCH /api/users/{id}/email 호출 시 200과 변경된 이메일 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void updateEmail_success_asAdmin() throws Exception {
+        // [GIVEN] 1) 기존 사용자 1명을 DB에 저장
+        User user = userRepository.save(
+                User.builder()
+                        .username("emailuser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("이메일닉")
+                        .email("old@example.com")
+                        .build()
+        );
+
+        /* [GIVEN] 2) 이메일 수정 요청 바디 JSON 준비
+             UserController 내부 static class EmailUpdateRequest
+             > ( 필드 : String email, JSON 형태 { "email": "new@example.com" }*/
+        Map<String, String> requestBody = Map.of("email", "new@example.com");
+        String json = objectMapper.writeValueAsString(requestBody);// objectMapper : 자바 객체(Map) -> JSON 문자열로 변환
+
+        // [WHEN] 3) PATCH /api/users/{id}/email 요청 전송 (관리자 권한)
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/email", user.getId()) // URL 경로에 대상 사용자 id 포함
+                        .contentType(MediaType.APPLICATION_JSON)    // 요청 본문 타입: application/json
+                        .content(json)  // JSON 요청 바디 전송
+        ).andDo(print());
+
+        // [THEN] 4) 응답 상태 코드와 JSON 응답 본문 검증
+        resultAction
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("이메일 수정 성공"))
+                // ↓ 반환된 data.id 가 수정한 사용자 id 인지 확인 (Long -> int 변환 : intValue() )
+                .andExpect(jsonPath("$.data.id").value(user.getId().intValue()))
+                // ↓ 반환된 data.email 이 "new@example.com" 으로 변경되었는지 확인
+                .andExpect(jsonPath("$.data.email").value("new@example.com"));
+
+        // [THEN] 5) 실제 DB에 이메일이 바뀌었는지도 추가로 확인 (2차 검증)
+        User updated = userRepository.findById(user.getId()).orElseThrow();
+        // DB에서 다시 조회했을 때 email 필드가 "new@example.com" 으로 저장되어야 함.
+        assertThat(updated.getEmail()).isEqualTo("new@example.com");
+    }
 }
