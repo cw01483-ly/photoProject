@@ -427,4 +427,29 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty());
                 // 메시지가 존재하는지 확인 (정확한 문구는 GlobalExceptionHandler 구현에 따라 다를 수 있으므로)
     }
+
+
+    // ⭐ 단일 조회 실패 테스트 (GET /api/users/{id}) - 존재하지 않는 ID 요청 시 404 반환
+    @Test
+    @DisplayName("단일 조회 실패 : 존재하지 않는 ID로 GET /api/users/{id} 호출 시 404와 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void getUserById_notFound_return404() throws Exception {
+
+        // [GIVEN] 존재하지 않는 ID 값 준비
+        Long notExistingId = 999999L;
+
+        // [WHEN] 관리자 권한으로 존재하지 않는 ID에 대해 GET 요청 전송
+        var resultAction = mockMvc.perform(
+                get("/api/users/{id}", notExistingId)
+                        .accept(MediaType.APPLICATION_JSON) // JSON 응답 기대
+        ).andDo(print());
+
+        // [THEN]
+        resultAction
+                .andExpect(status().isNotFound()) // 1) HTTP 상태코드가 404 Not Found 인지 확인
+                // ↓ [THEN] 2) 공통 응답 포맷(ApiResponse)에서 success가 false 이어야 함
+                .andExpect(jsonPath("$.success").value(false))
+                // ↓ [THEN] 3) 에러 메시지가 비어있지 않은지만 확인
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
 }
