@@ -15,8 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.domain.user.entity.User;
 import org.springframework.security.test.context.support.WithMockUser; // @WithMockUser
+import java.util.Map;// Map.of 사용
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get; // get() 헬퍼
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch; // patch() 헬퍼
 
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -278,6 +279,50 @@ public class UserControllerTest {
                 // ↑반환된 DTO의 username 값이 저장한 값과 일치하는지 확인
                 .andExpect(jsonPath("$.data.email").value("find@example.com"))
                 .andExpect(jsonPath("$.data.nickname").value("조회닉네임"));
+    }
 
+
+    // ⭐ 닉네임 업데이트 테스트 ( PATCH /api/users/{id}/nickname ) - 관리자 권한 성공 케이스
+    @Test
+    @DisplayName("닉네임 수정 성공 : 관리자가 PATCH /api/users/{id}/nickname 호출 시 200과 변경된 닉네임 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void updateNickname_success_asAdmin() throws Exception {
+
+        //[GIVEN] 1) 기존 사용자 1명을 DB에 저장. (닉네임을 바꿀 대상)
+        User user = userRepository.save(
+                User.builder()
+                        .username("nickuser1")
+                        .password(passwordEncoder.encode("Password1!"))// 비밀번호는 인코딩해서 저장
+                        .nickname("기존닉네임")
+                        .email("nick1@example.com")
+                        .build()
+        );
+
+        // [GIVEN] 2) 닉네임 수정 요청 바디 JSON 준비, UserController 내부 static class NicknameUpdateRequest
+        Map<String, String> requestBody = Map.of("nickname", "새닉네임");
+        String json = objectMapper.writeValueAsString(requestBody);
+        // objectMapper : 자바객체(Map) -> JSON 문자열로 변환 >> { "nickname": "새닉네임" } 형태의 JSON 문자열 생성
+
+        // [WHEN] 3) PATCH /api/users/{id}/nickname 요청 전송 (관리자 권한)
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/nickname", user.getId())          // URL 경로에 대상 사용자 id 포함
+                        .contentType(MediaType.APPLICATION_JSON)          // 요청 본문 타입: application/json
+                        .content(json)                                   // JSON 요청 바디 전송
+        ).andDo(print());
+
+        // [THEN] 4) 응답 상태 코드와 JSON 응답 본문 검증
+        resultAction
+                .andExpect(status().isOk()) // HTTP 200 OK
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("닉네임 수정 성공"))
+                // ↓ 반환된 data.id가 수정한 사용자 id 인지 확인
+                .andExpect(jsonPath("$.data.id").value(user.getId().intValue()))
+                // ↓ 반환된 data.nickname 이 "새닉네임" 으로 변경되었는지 확인
+                .andExpect(jsonPath("$.data.nickname").value("새닉네임"));
+
+        // [THEN] 5) DB에 실제로 닉네임이 바뀌었는지도 추가로 확인 (2차 검증)
+        User updated = userRepository.findById(user.getId()).orElseThrow();
+        // DB에서 다시 조회했을 때 닉네임이 "새닉네임" 으로 저장되어 있어야 한다.
+        assertThat(updated.getNickname()).isEqualTo("새닉네임");
     }
 }
