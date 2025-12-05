@@ -245,4 +245,39 @@ public class UserControllerTest {
         // 배열의 순서 상관 없이 username이 포함되어있으면 성공
     }
 
+
+
+    // ⭐ username 기준 조회 테스트 ( GET /api/users/username/{username} ) - 관리자 권한 성공 케이스
+    @Test
+    @DisplayName("username 조회 성공 : 관리자가 GET /api/users/username/{username} 호출 시 200과 UserResponseDto 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void getByUsername_success_asAdmin() throws Exception {
+
+        // [GIVEN] 조회 대상 사용자 생성
+        User saved =  userRepository.save(
+                User.builder()
+                        .username("finduser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("조회닉네임")
+                        .email("find@example.com")
+                        .build()
+        );
+
+        // [WHEN] GET /api/users/username/{username} 요청 전송 (관리자 권한)
+        var resultAction = mockMvc.perform(
+                get("/api/users/username/{username}", "finduser1") //URL 경로 변수 username 전달
+                        .accept(MediaType.APPLICATION_JSON) //JSON 응답 기대
+        ).andDo(print()); // 응답 전체 출력
+
+        // [THEN] 응답 코드 및 JSON 내용 검증
+        resultAction
+                .andExpect(status().isOk()) // HTTP 200 정상 반환
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("username 기준 조회 성공"))
+                .andExpect(jsonPath("$.data.username").value("finduser1"))
+                // ↑반환된 DTO의 username 값이 저장한 값과 일치하는지 확인
+                .andExpect(jsonPath("$.data.email").value("find@example.com"))
+                .andExpect(jsonPath("$.data.nickname").value("조회닉네임"));
+
+    }
 }
