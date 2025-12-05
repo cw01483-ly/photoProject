@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 // MockMvc로 HTTP POST 요청을 만들 때 사용하는 헬퍼 메서드
 
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 // JSON 응답 본문에서 특정 필드 값을 검증할 때 사용하는 유틸리티
 
@@ -168,7 +169,7 @@ public class UserControllerTest {
      */
 
 
-    // ⭐ 단일조회 성공 테스트
+    // ⭐ 단일 조회 성공 테스트
     @Test
     @DisplayName("단일 조회 성공 : 관리자 GET /api/users/{id} 호출 시 200과 UserResponseDto 반환")
     @WithMockUser(username = "admin", roles = {"ADMIN"})
@@ -198,4 +199,50 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.data.email").value("example@example.net"))
                 .andExpect(jsonPath("$.data.nickname").value("조회대상"));
     }
+
+
+    // ⭐ 전체 사용자 조회 테스트 ( GET / api/users) - 관리자 권한 성공 케이스
+    @Test
+    @DisplayName("전체 조회 성공 : 관리자가 GET /api/users 호출 시 200과 사용자 목록 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void getAll_success_asAdmin() throws Exception {
+        //  테스트를 깨끗한 상태에서 시작
+        //userRepository.deleteAll(); < 코드500 반환 후보라 제거
+
+        // [GIVEN] 1) 조회 대상 사용자 2명 생성 (전체 조회 2명 이상)
+        User user1 = userRepository.save(
+                User.builder()
+                        .username("listuser1")
+                        .password(passwordEncoder.encode("Password1!")) // 비밀번호는 그냥 인코딩해서 넣음
+                        .nickname("리스트닉1")
+                        .email("list1@example.com")
+                        .build()
+        );
+        User user2 = userRepository.save(
+                User.builder()
+                        .username("listuser2")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("리스트닉2")
+                        .email("list2@example.com")
+                        .build()
+        );
+
+        // [WHEN] 2) 관리자 권한으로 GET /api/users 요청, body가 없는 GET 요청 >> .content() 필요 없음
+        var  resultAction = mockMvc.perform(
+                get("/api/users") // GET /api/users
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());// 콘솔창에 조회한 데이터 출력
+
+        // [THEN] 3) 응답 상태 코드와 JSON 내용 검증, ApiResponse<List<UserResponseDto>> 형태를 기대
+        resultAction
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(jsonPath("$.success").value(true)) // success == true
+                .andExpect(jsonPath("$.message").value("전체 사용자 조회 성공"))
+                .andExpect(jsonPath("$.data").isArray()); // data가 배열형태로 왔는지 확인
+        resultAction
+                .andExpect(jsonPath("$.data[?(@.username == 'listuser1')]").exists())
+                .andExpect(jsonPath("$.data[?(@.username == 'listuser2')]").exists());
+        // 배열의 순서 상관 없이 username이 포함되어있으면 성공
+    }
+
 }
