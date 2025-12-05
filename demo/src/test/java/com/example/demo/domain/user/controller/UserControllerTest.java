@@ -477,4 +477,26 @@ public class UserControllerTest {
                 // [THEN] 3) 에러 메시지가 비어있지 않은지만 확인
                 .andExpect(jsonPath("$.message").isNotEmpty());
     }
+
+
+    // ⭐ 전체 조회 권한 실패 테스트 (GET /api/users) - 일반 USER가 호출 시 403 Forbidden
+    @Test
+    @DisplayName("전체 조회 실패 : 일반 USER가 GET /api/users 호출 시 403 Forbidden 반환")
+    @WithMockUser(username = "normalUser", roles = {"USER"})
+
+    void getAll_forbidden_whenNotAdmin() throws Exception {
+
+        // [GIVEN] 관리자 전용 API라 DB에 사용자를 만들 필요 없음
+
+        // [WHEN] 일반 USER 권한으로 GET /api/users 요청
+        var resultAction = mockMvc.perform(
+                get("/api/users") // 관리자 전용 API
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print()); // 응답 전체를 콘솔에 출력해서 상태/바디 확인
+
+        // [THEN] 권한이 충족하지 못하므로 상태코드 403 기대
+        resultAction
+                .andExpect(status().isForbidden()); //HTTP 상태 코드가 403 Forbidden 인지 확인
+                 // 응답 Body 구조는 Spring Security가 기본 처리하므로 상태 코드만 검증
+    }
 }
