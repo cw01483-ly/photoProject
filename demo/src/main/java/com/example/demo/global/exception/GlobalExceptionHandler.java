@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
+
 
 
 import java.time.LocalDateTime;
@@ -156,6 +158,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail(body, ex.getMessage()));
+    }
+
+    /* 5) 권한 부족(AccessDeniedException) 예외 처리
+        - @PreAuthorize, @Secured 등에서 권한이 부족할 때 발생
+        - 예: ROLE_USER가 ADMIN 전용 API에 접근 시
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleAccessDeniedException(
+            AccessDeniedException ex,
+            HttpServletRequest request
+    ) {
+        // 5-1) 권한 관련 문제는 경고 레벨로 로그 남김
+        log.warn("권한 없음 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        // 5-2) 클라이언트에게 내려줄 에러 응답 본문 생성
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)                          // 실패
+                .status(HttpStatus.FORBIDDEN.value())    // 403
+                .message("해당 요청에 대한 권한이 없습니다.") // 사용자에게 보여줄 메시지
+                .path(request.getRequestURI())           // 에러 발생 경로
+                .timestamp(LocalDateTime.now())          // 발생 시각
+                .build();
+
+        // 5-3) 403 상태코드 + 공통 실패 포맷(ApiResponse.fail)으로 감싸서 반환
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.fail(body, "해당 요청에 대한 권한이 없습니다."));
     }
 
     // 공통 에러 응답 포맷 클래스 -> 이 클래스를 JSON으로 변환 후 클라이언트에게 송출
