@@ -452,4 +452,29 @@ public class UserControllerTest {
                 // ↓ [THEN] 3) 에러 메시지가 비어있지 않은지만 확인
                 .andExpect(jsonPath("$.message").isNotEmpty());
     }
+
+
+    // ⭐ username 조회 실패 테스트 (GET /api/users/username/{username}) - 존재하지 않는 username 요청 시 404 반환
+    @Test
+    @DisplayName("username 조회 실패 : 존재하지 않는 username으로 GET /api/users/username/{username} 호출 시 404와 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void getByUsername_notFound_return404() throws Exception {
+
+        // [GIVEN] 존재하지 않는 username 값 준비 (DB에 없는 값이라고 가정)
+        String notExistingUsername = "no_such_user_123";
+
+        // [WHEN] 관리자 권한으로 존재하지 않는 username에 대해 GET 요청 전송
+        var resultAction = mockMvc.perform(
+                get("/api/users/username/{username}", notExistingUsername)
+                        .accept(MediaType.APPLICATION_JSON) // JSON 응답 기대
+        ).andDo(print()); // 응답 전체(상태코드, Body)를 콘솔에 출력해서 디버깅에 도움
+
+        // [THEN] 1) HTTP 상태코드가 404 Not Found 인지 확인
+        resultAction
+                .andExpect(status().isNotFound())
+                // [THEN] 2) 공통 응답 포맷(ApiResponse)에서 success가 false 이어야 함
+                .andExpect(jsonPath("$.success").value(false))
+                // [THEN] 3) 에러 메시지가 비어있지 않은지만 확인
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
 }
