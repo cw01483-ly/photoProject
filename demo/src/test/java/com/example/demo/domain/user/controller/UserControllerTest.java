@@ -163,10 +163,9 @@ public class UserControllerTest {
 
     /*
         ※ 추후 확장
-        - 회원가입 실패 : 잘못된 이메일 형식 / 공백 username 등 → 400 + GlobalExceptionHandler 응답 구조 검증
-        - 단일 조회(GET /api/users/{id}) : ADMIN 또는 본인일 때 200, 타인일 때 403
-        - 닉네임/이메일 수정 PATCH API : 성공/실패, 권한(본인/관리자) 체크
-        - 삭제 DELETE /api/users/{id} : 성공 케이스, 없는 ID → 404, 권한 없는 사용자 → 403
+        - 단일 조회(GET /api/users/{id}) : 실패, 타인일 때 403
+        - 닉네임/이메일 수정 PATCH API : 실패, 체크
+        - 삭제 DELETE /api/users/{id} :  실패, 없는 ID → 404, 권한 없는 사용자 → 403
      */
 
 
@@ -402,5 +401,30 @@ public class UserControllerTest {
         // [THEN] 4) DB에서 해당 사용자 삭제 되었는지 2차 검증
         boolean exists = userRepository.findById(id).isPresent();
         assertThat(exists).isFalse();// 삭제 후 findById(id) 값이 비어있어야함
+    }
+
+
+    // ⭐ 회원 삭제 실패 테스트 (DELETE /api/users/{id}) - 존재하지 않는 ID 요청 시 404 반환 (관리자 권한)
+    @Test
+    @DisplayName("회원 삭제 실패 : 존재하지 않는 ID로 DELETE /api/users/{id} 호출 시 404와 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void deleteUser_notFound_return404() throws Exception {
+
+        // [GIVEN] 사용자 생성하지 않거나 존재하지 않을 큰 값 Id 생성하여 사용
+        Long notExistingId = 999999L;
+
+        // [WHEN] 관리자 권한으로 존재않는 ID에 대해 DELETE 요청 전송
+        var resultAction = mockMvc.perform(
+                delete("/api/users/{id}", notExistingId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] 1) HTTP 상태코드가 404 Not Found 인지 확인
+        resultAction
+                .andExpect(status().isNotFound())
+                // [THEN] 2) 공통 응답 포맷(ApiResponse)에서 success가 false 이어야 함
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+                // 메시지가 존재하는지 확인 (정확한 문구는 GlobalExceptionHandler 구현에 따라 다를 수 있으므로)
     }
 }
