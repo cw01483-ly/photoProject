@@ -582,4 +582,53 @@ public class UserControllerTest {
         resultAction
                 .andExpect(status().isBadRequest());                     // 현재 구조에서는 400 Bad Request 응답이 정상
     }
+
+
+
+    // ⭐ 이메일 수정 권한 실패 테스트 (PATCH /api/users/{id}/email) - 일반 USER가 다른 사람 이메일 수정 시 실패
+    @Test
+    @DisplayName("이메일 수정 실패 : 일반 USER가 다른 사용자 이메일 PATCH 시 권한 부족으로 실패")
+    @WithMockUser(username = "normalUser", roles = {"USER"})
+    void updatePassword_forbidden_whenNotAdminAndNotOwner() throws Exception {
+        // [GIVEN] 이메일 업데이트 대상 유저 생성
+        User targetUser = userRepository.save(
+                User.builder()
+                        .username("targetUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("이메일유저")
+                        .email("oldmail@example.com")
+                        .build()
+        );
+
+        // [GIVEN] 이메일 수정 요청 JSON 바디 준비
+        Map<String, String> requestBody = Map.of("email", "hack@example.com");
+        String json = objectMapper.writeValueAsString(requestBody); // Map -> JSON 문자열 변환
+
+        // [WHEN] 현재 로그인 계정 :  @WithMockUser("normalUser"),
+        // PATCH /api/users/{id}/email 에서 {id} 자리에 targetUser의 id를 넣어 요청 보냄
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/email", targetUser.getId())       // 다른 사용자의 id로 접근
+                        .contentType(MediaType.APPLICATION_JSON)          // 요청 본문 타입: application/json
+                        .content(json)                                   // JSON 요청 바디 전송
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            현재 프로젝트의 @PreAuthorize 설정이
+            예) @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
+            와 같이 principal.id 에 접근하는 형태라면,
+            @WithMockUser 가 제공하는 기본 UserDetails 구현에는 id 필드가 없으므로
+            SpEL에서 principal.id 평가 시 예외가 발생.
+            이 예외는 GlobalExceptionHandler 에서 IllegalArgumentException 등으로 처리되어
+            HTTP 400 Bad Request 로 응답되는 구조,
+            지금 단계에서는 "권한 체크 도중 잘못된 principal 접근으로 인한 400 응답"을 검증.
+            이후 CustomUserDetails 를 도입해서 principal.id 를 정상 제공하고,
+            권한이 없는 경우 AccessDeniedException -> 403 Forbidden 으로 처리하도록 변경하면
+            이 테스트의 기대 상태 코드를 isForbidden() 으로 수정.
+         */
+        resultAction
+                .andExpect(status().isBadRequest()); // HTTP 400
+    }
+
 }
