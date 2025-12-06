@@ -677,4 +677,47 @@ public class UserControllerTest {
         boolean exists = userRepository.findById(targetId).isPresent(); // 삭제가 막혔으므로 여전히 존재해야 함
         assertThat(exists).isTrue();
     }
+
+
+
+    // ⭐ 회원가입 검증 실패 테스트 (이메일 형식 오류) - POST /api/users
+    @Test
+    @DisplayName("회원가입 실패 : 잘못된 이메일 형식으로 요청 시 400 Bad Request와 실패 응답 반환")
+    void register_validationFail_invalidEmail_return400() throws Exception {
+        // [GIVEN] 이메일 형식이 잘못된 회원가입 요청 DTO 생성
+        UserSignupRequestDto requestDto = UserSignupRequestDto.builder()
+                .username("invalidemailuser")
+                .password("Password1@")
+                .nickname("검증실패닉")
+                .email("not-an-email") // 이메일 형식 오류
+                .build();
+
+        // DTO -> JSON 문자열 변환 (컨트롤러에서 @RequestBody 로 받는 JSON 형식과 동일하게 직렬화)
+        String json = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN] 잘못된 이메일을 포함한 JSON 으로 POST /api/users 요청 전송
+        var resultAction = mockMvc.perform(
+                post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON) // 요청 본문 타입: application/json
+                        .content(json)                          // 잘못된 이메일을 담은 JSON 요청 바디
+                        .accept(MediaType.APPLICATION_JSON)     // JSON 응답 기대
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            기대 시나리오
+            - @Valid 가 붙은 DTO에서 email 필드에 대한 @Email(or 정규식) 검증이 실패
+            - MethodArgumentNotValidException 이 발생
+            - GlobalExceptionHandler 에서 이를 처리하여
+              HTTP 400 Bad Request 와 공통 응답 포맷(ApiResponse)을 반환
+            여기서는 구체적인 에러 메시지 내용보다는
+            "400 상태 코드"와 "success=false, message가 비어있지 않음"을 우선적으로 검증.
+            (필드별 에러 상세 구조는 GlobalExceptionHandler 의 구현에 따라 달라질 수 있기 때문)
+         */
+        resultAction
+                .andExpect(status().isBadRequest())  // HTTP 400 Bad Request
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());// 에러 메시지가 비어있지 않은지만 확인
+    }
+
 }
