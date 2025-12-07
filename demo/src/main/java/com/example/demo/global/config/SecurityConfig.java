@@ -2,10 +2,12 @@ package com.example.demo.global.config;
 
 /* 스프링 시큐리티 전역 보안 설정 클래스*/
 
-import lombok.Builder;
+import com.example.demo.global.security.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -47,5 +49,34 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
+    }
+
+    /*
+         AuthenticationManager를 명시적으로 등록하여
+         Spring Security가 CustomUserDetailsService를 사용하도록 연결
+         로그인 시 userDetailsService.loadUserByUsername(username) 실행
+         PasswordEncoder로 비밀번호 검증 자동 처리
+    */
+    @Bean
+    public AuthenticationManager authenticationManager(
+            HttpSecurity http, // Security 설정 핵심 객체
+            PasswordEncoder passwordEncoder,// 비밀번호 검증
+            CustomUserDetailsService userDetailsService // DB에서 사용자 조회 담당
+    ) throws Exception{
+        // SecurityBuilder에서 AuthenticationManagerBuilder를 가져와 설정
+        AuthenticationManagerBuilder authBuilder =
+                http.getSharedObject(AuthenticationManagerBuilder.class);
+
+        // 만든 CustomUserDetailsService + PasswordEncoder 연결
+        /*
+            1) username -> DB 조회는 CustomUserDetailsService 사용
+            2) 비밀번호 비교는 BCryptPasswordEncoder 사용
+        */
+        authBuilder
+                .userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder);
+
+        // AuthenticationManager 객체 생성 후 반환
+        return authBuilder.build();
     }
 }
