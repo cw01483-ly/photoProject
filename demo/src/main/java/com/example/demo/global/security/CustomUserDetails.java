@@ -30,88 +30,70 @@ public class CustomUserDetails implements UserDetails {
     private final Collection<? extends GrantedAuthority> authorities; // 권한 목록 (ROLE_USER 등)
 
     /*
-        생성자
-        - User 엔티티를 기반으로 CustomUserDetails 객체를 만들기 위한 초기화
-        - 스프링 시큐리티는 UserDetails를 principal로 저장하므로,
-          필요한 데이터(id, username, password, authorities)를 모두 여기 저장해야 한다.
+        User 엔티티를 기반으로 CustomUserDetails 객체를 만드는 생성자
+        - 로그인 시 UserDetailsService에서 new CustomUserDetails(user) 형태로 사용됨
+        - User 엔티티에는 role이 Enum(UserRole) 이므로
+          스프링 권한 규칙인 "ROLE_권한명" 으로 바꿔 SimpleGrantedAuthority 로 감싸야 한다.
      */
-    public CustomUserDetails(Long id,
-                             String username,
-                             String password,
-                             Collection<? extends GrantedAuthority> authorities) {
-        this.id = id;                // principal.id 값
-        this.username = username;    // principal.username
-        this.password = password;    // 로그인 시 패스워드 비교용
-        this.authorities = authorities; // ROLE_USER / ROLE_ADMIN 권한 목록
-    }
+    public CustomUserDetails(User user) {
+        this.id = user.getId();                // User PK -> principal.id
+        this.username = user.getUsername();    // User(username)
+        this.password = user.getPassword();    // 암호화된 비밀번호
 
-    /*
-        정적 메서드: User 엔티티 → CustomUserDetails 변환
-        ------------------------------------------------
-        - User 엔티티에는 role 필드가 UserRole enum 형태로 존재
-        - Spring Security에서는 "ROLE_권한" 형태를 요구하므로
-          SimpleGrantedAuthority("ROLE_" + role.name()) 로 변환해야 한다.
-     */
-    public static CustomUserDetails from(User user) {
-
-        // 1) 엔티티에서 user.role 가져오기 (예: UserRole.USER)
-        UserRole role = user.getRole();
-
-        // 2) 스프링 시큐리티 권한 객체로 변환
-        //    UserRole.USER → "ROLE_USER"
-        SimpleGrantedAuthority authority =
-                new SimpleGrantedAuthority("ROLE_" + role.name());
-
-        // 3) CustomUserDetails 생성 후 반환
-        return new CustomUserDetails(
-                user.getId(),             // principal.id
-                user.getUsername(),       // principal.username
-                user.getPassword(),       // 인코딩된 비밀번호
-                List.of(authority)        // 단일 권한만 있다고 가정 → 리스트 하나 생성
+        /*
+            권한 설정
+            예) UserRole.ADMIN -> "ROLE_ADMIN"
+            예) UserRole.USER  -> "ROLE_USER"
+            스프링 시큐리티는 반드시 ROLE_ 접두어가 있어야 인식함.
+         */
+        this.authorities = List.of(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
         );
     }
 
-    // UserDetails 인터페이스 필수 구현 메서드
+
+    // UserDetails 인터페이스 구현부, 스프링 시큐리티가 로그인/세션 유지에 사용하는 기능들
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 사용자 권한 목록 반환
-        return authorities;
+        return authorities; // 권한 목록(1개 이상)
     }
 
     @Override
     public String getPassword() {
-        // 로그인 시 패스워드 비교에 사용
-        return password;
+        return password; // AuthenticationManager가 비밀번호 검증에 사용
     }
 
     @Override
     public String getUsername() {
-        // 로그인 식별자로 사용할 username 반환
-        return username;
+        return username; // 로그인 아이디
     }
+
+    /*
+        아래 4개의 값은 "계정 상태"를 의미.
+        true → 계정 활성
+        false → 계정 제한
+        지금 단계에서는 모두 true 로 설정해도 충분함.
+     */
 
     @Override
     public boolean isAccountNonExpired() {
-        // 계정 만료 여부 (true: 만료되지 않음)
-        return true;
+        return true; // 계정 만료 여부
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        // 계정 잠김 여부 (true: 잠기지 않음)
-        return true;
+        return true; // 계정 잠김 여부
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        // 비밀번호 만료 여부 (true: 만료되지 않음)
-        return true;
+        return true; // 비밀번호 만료 여부
     }
 
     @Override
     public boolean isEnabled() {
-        // 계정 활성화 상태 여부 (true: 활성화됨)
-        return true;
+        return true; // 계정 활성 여부
     }
 }
