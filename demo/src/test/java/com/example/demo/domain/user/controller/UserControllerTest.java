@@ -589,7 +589,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("이메일 수정 실패 : 일반 USER가 다른 사용자 이메일 PATCH 시 권한 부족으로 실패")
     @WithMockUser(username = "normalUser", roles = {"USER"})
-    void updatePassword_forbidden_whenNotAdminAndNotOwner() throws Exception {
+    void updateEmail_forbidden_whenNotAdminAndNotOwner() throws Exception {
         // [GIVEN] 이메일 업데이트 대상 유저 생성
         User targetUser = userRepository.save(
                 User.builder()
