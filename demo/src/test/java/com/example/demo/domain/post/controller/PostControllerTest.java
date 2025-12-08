@@ -166,6 +166,60 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.authorName").value("조회작성자"))
                 .andExpect(jsonPath("$.data.views").value(1))
                 .andExpect(jsonPath("$.data.likeCount").value(0));
+    }
 
+
+    // ⭐ 전체 게시글 목록 조회 성공 테스트 (GET /posts)
+    @Test
+    @DisplayName("전체 조회 성공 : GET /posts 호출 시 200, 페이징된 게시글 목록 반환")
+    void getPosts_success() throws Exception{
+        // [GIVEN-1] 게시글 작성자 생성
+        User author = userRepository.save(
+                User.builder()
+                        .username("postauthor1")
+                        .password("Password123!")
+                        .nickname("목록작성자")
+                        .email("list@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 게시글 여러개 저장
+        Post post1 = postRepository.save(
+                Post.builder()
+                        .title("제목1")
+                        .content("내용1")
+                        .author(author)
+                        .displayNumber(1L) // 정렬용 번호(임의)
+                        .build()
+        );
+
+        Post post2 = postRepository.save(
+                Post.builder()
+                        .title("제목2")
+                        .content("내용2")
+                        .author(author)
+                        .displayNumber(2L) // 정렬용 번호(임의)
+                        .build()
+        );
+
+        // [WHEN] GET /posts?page=0&size=10 요청 보내기
+        var resultAction = mockMvc.perform(
+                get("/posts")
+                        .param("page", "0") // 0번 페이지
+                        .param("size", "10") // 페이지당 게시글 수
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-1] HTTP 상태 코드 및 ApiResponse 기본 구조 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray());// data.content가 배열인지 확인
+
+        // [THEN-2] 게시글 목록안에 제목 확인
+        resultAction
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목1')]").exists())
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목2')]").exists());
     }
 }
