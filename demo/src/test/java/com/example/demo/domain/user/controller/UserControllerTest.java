@@ -19,6 +19,8 @@ import java.util.Map;// Map.of 사용
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get; // get() 헬퍼
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch; // patch() 헬퍼
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete; // delete() 헬퍼
+import com.example.demo.domain.user.role.UserRole; // UserRole.USER 사용
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user; // user(principal) 헬퍼
 
 import static org.assertj.core.api.Assertions.assertThat;
 // 응답 본문 파싱 후 값 검증용 (AssertJ)
@@ -504,13 +506,22 @@ public class UserControllerTest {
     // ⭐ 단일 조회 권한 실패 테스트 (GET /api/users/{id}) - 일반 USER가 다른 사람 id 조회 시 403
     @Test
     @DisplayName("단일 조회 실패 : 일반 USER가 다른 사용자 id로 GET /api/users/{id} 호출 시 403 Forbidden 반환")
-    @WithMockUser(username = "normalUser", roles = {"USER"})
     void getUserById_forbidden_whenNotAdminAndNotOwner() throws Exception {
 
-        // [GIVEN] 조회 대상이 될 사용자 1명 생성. (normalUser와는 다른 계정)
+        // [GIVEN-1] 로그인 한 사용자 (principal 가 될 유저) 생성
+        User loginUser = userRepository.save(
+                User.builder()
+                        .username("normalUser1")
+                        .password(passwordEncoder.encode("Password123!"))
+                        .nickname("로그인유저")
+                        .email("login@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 조회 대상이 될 사용자 1명 생성. (loginUser와는 다른 계정)
         User targetUser = userRepository.save(
                 User.builder()
-                        .username("targetUser1")                          // 조회 대상 계정
+                        .username("targetUser1") // 조회 대상 계정
                         .password(passwordEncoder.encode("Password1!"))
                         .nickname("조회대상닉")
                         .email("target@example.com")
@@ -518,23 +529,37 @@ public class UserControllerTest {
         );
         Long targetId = targetUser.getId(); // 이 ID는 현재 로그인한 normalUser의 id가 아님
 
-        // [WHEN] 일반 USER(normalUser) 권한으로 다른 사람 id에 대해 GET /api/users/{id} 호출
+    /* [GIVEN-3] 현재 로그인한 사용자 정보를 기반으로 CustomUserDetails(principal) 생성
+       ※ com.example.demo.global.security.CustomUserDetails 의 생성자를 실제 구현에 맞게 사용
+          예: new CustomUserDetails(loginUser) 형태라면 아래처럼 작성 */
+        com.example.demo.global.security.CustomUserDetails principal =
+                new com.example.demo.global.security.CustomUserDetails(loginUser);
+
+        /* [GIVEN-4] (기존 SecurityContextHolder 직접 주입 대신)
+            MockMvc 요청에 user(principal)을 붙여서 인증정보를 전달
+             -> Spring Security 필터 체인 안에서도 principal 이 CustomUserDetails 로 인식*/
+
+        // [WHEN] 로그인된 사용자(principal = loginUser)가
+        //        "다른 사람" id(targetId)에 대해 GET /api/users/{id} 호출
         var resultAction = mockMvc.perform(
                 get("/api/users/{id}", targetId)
+                        .with(user(principal))                  // ★ 핵심: 이 요청의 principal 설정
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print()); // 실제 응답(상태코드, Body)을 콘솔에 출력해서 확인
 
 /*
-         [THEN]
-          - @PreAuthorize("hasRole('ADMIN') or #id == principal.id") 평가 과정에서
-            @WithMockUser 가 제공하는 기본 principal(org.springframework.security.core.userdetails.User)에는
-            id 필드/프로퍼티가 없으므로, principal.id 접근 시 스프링 EL 내부에서 예외 발생
-          - 이 예외는 GlobalExceptionHandler 의 handleIllegalArgumentException(...) 에서 400(Bad Request)으로 처리됨
-          - 실제 운영 환경에서 CustomUserDetails에 id 프로퍼티를 두고 principal.id가 정상 동작하게 구성하면,
-            이 경우 AccessDeniedException → 403 Forbidden 으로 응답하도록 확장할 수 있음.
+     [THEN]
+      - @PreAuthorize("hasRole('ADMIN') or #id == principal.id") 평가 과정에서
+        @WithMockUser 가 제공하는 기본 principal(org.springframework.security.core.userdetails.User)에는
+        id 필드/프로퍼티가 없으므로, principal.id 접근 시 스프링 EL 내부에서 예외 발생
+      - 이 예외는 GlobalExceptionHandler 의 handleIllegalArgumentException(...) 에서 400(Bad Request)으로 처리됨
+      - 실제 운영 환경에서 CustomUserDetails에 id 프로퍼티를 두고 principal.id가 정상 동작하게 구성하면,
+        이 경우 AccessDeniedException → 403 Forbidden 으로 응답하도록 확장할 수 있음.
+      - ★ 지금 이 테스트에서는 @WithMockUser 대신 CustomUserDetails principal을 직접 넣어주므로,
+        @PreAuthorize 표현식이 정상 평가되고, 결과적으로 권한 부족 시 403 Forbidden 이 반환되는지 검증
 */
         resultAction
-                .andExpect(status().isBadRequest()); // 현재 테스트 환경에서는 400이 응답되는 것이 정상
+                .andExpect(status().isForbidden()); // 권한 부족 403 Forbidden 기대
     }
 
 
@@ -580,7 +605,7 @@ public class UserControllerTest {
             이 테스트의 기대 상태 코드를 isForbidden() 으로 수정.
          */
         resultAction
-                .andExpect(status().isBadRequest());                     // 현재 구조에서는 400 Bad Request 응답이 정상
+                .andExpect(status().isBadRequest());  // 현재 구조에서는 400 Bad Request 응답이 정상
     }
 
 
