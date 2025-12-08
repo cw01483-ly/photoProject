@@ -680,9 +680,18 @@ public class UserControllerTest {
     // ⭐ 회원 삭제 권한 실패 테스트 (DELETE /api/users/{id}) - 일반 USER가 다른 사람 삭제 시 실패
     @Test
     @DisplayName("회원 삭제 실패 : 일반 USER가 다른 사용자 DELETE 시 권한 부족으로 실패")
-    @WithMockUser(username = "normalUser", roles = {"USER"})
     void deleteUser_forbidden_whenNotAdminAndNotOwner() throws Exception {
-        // [GIVEN] 삭제 대상이 될 유저 생성
+        // [GIVEN-1] 로그인 할 유저 생성
+        User loginUser = userRepository.save(
+                User.builder()
+                        .username("normalUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("로그인닉")
+                        .email("login@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 삭제 대상이 될 유저 생성
         User targetUser = userRepository.save(
                 User.builder()
                         .username("targetDeleteUser1") // 삭제 대상 계정 username
@@ -693,29 +702,27 @@ public class UserControllerTest {
         );
         Long targetId = targetUser.getId();  // 삭제 대상 사용자의 PK
 
-        // [WHEN] 현재 로그인한 계정은 @WithMockUser("normalUser") 이고,
-        //        DELETE /api/users/{id} 에서 {id} 자리에 targetUser의 id를 넣어 요청 보냄
+        // [GIVEN-3] principal로 사용할 CustomUserDetails 생성
+        com.example.demo.global.security.CustomUserDetails principal =
+                new com.example.demo.global.security.CustomUserDetails(loginUser);
+
+        // [WHEN] nomalUser1이 targetDeleteUser1을 삭제하려 DELETE요청
+
         var resultAction = mockMvc.perform(
                 delete("/api/users/{id}", targetId)  // 다른 사용자의 id로 DELETE 요청
+                        .with(user(principal))
                         .accept(MediaType.APPLICATION_JSON)    // JSON 응답 기대
         ).andDo(print());
 
         // [THEN]
         /*
-            현재 프로젝트의 @PreAuthorize 설정이
-            예) @PreAuthorize("hasRole('ADMIN') or #id == principal.id")
-            처럼 principal.id 를 사용하는 구조라면,
-            @WithMockUser 가 제공하는 기본 UserDetails 구현에는 id 필드가 없어서
-            SpEL에서 principal.id 평가 시 예외가 발생.
-            이 예외는 GlobalExceptionHandler 에서 IllegalArgumentException 등으로 처리되어
-            HTTP 400 Bad Request 로 응답되는 구조,
-            지금 단계에서는 "권한 체크 도중 잘못된 principal 접근으로 인한 400 응답"을 검증.
-            이후 CustomUserDetails 를 도입해서 principal.id 를 정상 제공하고,
-            권한이 없는 경우 AccessDeniedException → 403 Forbidden 으로 처리하도록 변경하면,
-            이 테스트의 기대 상태 코드를 isForbidden() 으로 수정.
-         */
+        @PreAuthorize("hasRole('ADMIN') or #id == principal.id") 조건 평가:
+         - hasRole('ADMIN') → false
+         - #id == principal.id → false
+         => AccessDeniedException 발생 → GlobalExceptionHandler에서 403 반환
+    */
         resultAction
-                .andExpect(status().isBadRequest());// 현재 구조에서는 400 Bad Request 응답이 정상
+                .andExpect(status().isForbidden());
 
         // [THEN] 2차 검증 : 실제로 DB에서 사용자가 삭제되지 않았는지도 확인
         boolean exists = userRepository.findById(targetId).isPresent(); // 삭제가 막혔으므로 여전히 존재해야 함
