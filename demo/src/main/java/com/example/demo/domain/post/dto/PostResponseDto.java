@@ -37,7 +37,7 @@ public class PostResponseDto {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .views(post.getViews())
-                .authorName(post.getAuthor().getUsername()) //User엔티티에서 작성자명 추출
+                .authorName(post.getAuthor().getNickname()) //User엔티티에서 작성자명 추출(화면은 닉네임 노출)
                 .createdAt(post.getCreatedAt())  // BaseTimeEntity에서 상속된 작성시각
                 .updatedAt(post.getUpdatedAt())  // BaseTimeEntity에서 상속된 수정시각
                 .likeCount(likeCount) //Like 개수 설정
