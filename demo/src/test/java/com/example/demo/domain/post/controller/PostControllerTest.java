@@ -115,8 +115,6 @@ public class PostControllerTest {
 
     }
     /* 추가 예정 시나리오
-        - getPosts_success()
-        - getPostsByAuthor_success()
         - searchPosts_success()
         - updatePost_success()
         - deletePost_success()
@@ -221,5 +219,80 @@ public class PostControllerTest {
         resultAction
                 .andExpect(jsonPath("$.data.content[?(@.title == '제목1')]").exists())
                 .andExpect(jsonPath("$.data.content[?(@.title == '제목2')]").exists());
+    }
+
+
+    // ⭐ 작성자별 게시글 목록 조회 성공 테스트 (GET /posts/author/{authorId})
+    @Test
+    @DisplayName("작성자별 조회 성공 : GET /posts/author/{authorId} 호출 시 해당 작성자의 게시글만 페이징해서 반환")
+    void getPostsByAuthor_success() throws Exception{
+        // [GIVEN-1] 게시글 작성자 2명 생성
+        User author1 = userRepository.save(
+                User.builder()
+                        .username("author1")
+                        .password("Password123!")
+                        .nickname("작성자1")
+                        .email("user1@example.com")
+                        .build()
+        );
+        User author2 = userRepository.save(
+                User.builder()
+                        .username("author2")
+                        .password("Password123!")
+                        .nickname("작성자2")
+                        .email("user2@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] author1의 게시글 2개 생성
+        Post author1Post1 = postRepository.save(
+                Post.builder()
+                        .title("제목1")
+                        .content("내용1")
+                        .author(author1)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Post author1Post2 = postRepository.save(
+                Post.builder()
+                        .title("제목2")
+                        .content("내용2")
+                        .author(author1)
+                        .displayNumber(2L)
+                        .build()
+        );
+
+        // [GIVEN-3] author2의 게시글 1개생성
+        Post author2Post1 = postRepository.save(
+                Post.builder()
+                        .title("제목3")
+                        .content("내용3")
+                        .author(author2)
+                        .displayNumber(3L)
+                        .build()
+        );
+        Long authorId = author1.getId(); // 조회 대상 작성자 ID
+
+        // [WHEN] GET/posts/author/{authorId}?page=0&size=10 요청 보내기
+        var resultAction = mockMvc.perform(
+                get("/posts/author/{authorId}", authorId)
+                        .param("page", "0")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-1] HTTP 상태 코드 및 기본 응답 구조 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("작성자별 게시글 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        // [THEN-2]  data.content 안에 "작성자1"의 글들은 포함되고, 작성자2는 제외되었는지 검증
+        resultAction
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목1')]").exists())
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목2')]").exists())
+                // ↓ 포함되면 안되므로 doesNotExist
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목3')]").doesNotExist());
     }
 }
