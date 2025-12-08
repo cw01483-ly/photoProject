@@ -115,7 +115,6 @@ public class PostControllerTest {
 
     }
     /* 추가 예정 시나리오
-        - searchPosts_success()
         - updatePost_success()
         - deletePost_success()
         - togglePostLike_success(), getPostLikeCount_success()
@@ -295,4 +294,76 @@ public class PostControllerTest {
                 // ↓ 포함되면 안되므로 doesNotExist
                 .andExpect(jsonPath("$.data.content[?(@.title == '제목3')]").doesNotExist());
     }
+
+
+
+    // ⭐ 게시글 검색 성공 테스트 (GET /posts/search)
+    @Test
+    @DisplayName("검색 성공 : keyword가 제목&내용 포함된 게시글만 페이징 후 반환")
+    void searchPosts_success() throws Exception{
+        // [GIVEN-1] 작성자 생성
+        User author = userRepository.save(
+                User.builder()
+                        .username("author1")
+                        .password("Password123!")
+                        .nickname("작성자1")
+                        .email("example@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 검색 키워드가 포함된 게시글 저장(keyword : 테스트)
+        Post testPost1 = postRepository.save(
+                Post.builder()
+                        .title("테스트 제목1")
+                        .content("테스트 내용1")
+                        .author(author)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Post testPost2 = postRepository.save(
+                Post.builder()
+                        .title("제목2")
+                        .content("테스트 내용2")
+                        .author(author)
+                        .displayNumber(2L)
+                        .build()
+        );
+
+        // [GIVEN-3] 키워드 미포함 게시글 생성
+        Post testPost3 = postRepository.save(
+                Post.builder()
+                        .title(" 제목")
+                        .content("내용")
+                        .author(author)
+                        .displayNumber(3L)
+                        .build()
+        );
+
+        String keyword = "테스트"; // 검색어
+
+        // [WHEN] GET /posts/search?keyword=스프링&page=0&size=10 요청
+        var resultAction = mockMvc.perform(
+                get("/posts/search")
+                        .param("keyword", keyword) // 검색어 파라미터
+                        .param("page", "0")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-1] HTTP 상태 코드 및 기본 응답 구조 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 검색 성공"))
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        // [THEN-2] '테스트' 포함된 게시글 존재 O, '테스트'와 무관한 게시글은 존재 X
+        resultAction
+                // 제목or내용에 '테스트' 확인
+                .andExpect(jsonPath("$.data.content[?(@.title == '테스트 제목1')]").exists())
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목2')]").exists())
+                // 검색어와 무관한 글은 없어야함
+                .andExpect(jsonPath("$.data.content[?(@.title == '제목')]").doesNotExist());
+    }
+
 }
