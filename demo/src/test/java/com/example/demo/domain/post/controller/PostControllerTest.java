@@ -13,11 +13,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 
 import static org.assertj.core.api.Assertions.assertThat; // DB 검증용
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post; // POST / 요청 생성 헬퍼
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print; // 결과 콘솔 출력
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath; // JSON 응답 검증용
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status; // HTTP 상태코드 검증용
@@ -115,7 +114,6 @@ public class PostControllerTest {
 
     }
     /* 추가 예정 시나리오
-        - updatePost_success()
         - deletePost_success()
         - togglePostLike_success(), getPostLikeCount_success()
     */
@@ -366,4 +364,60 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.content[?(@.title == '제목')]").doesNotExist());
     }
 
+
+    // ⭐ 게시글 수정 성공 테스트 (PUT /posts/{id})
+    @Test
+    @DisplayName("게시글 수정 성공 : 유효한 값으로 PUT /posts/{id} 호출 시 200과 수정된 PostResponseDto 반환")
+    void updatePost_success() throws Exception{
+        // [GIVEN-1] 게시글 작성자 생성
+        User author = userRepository.save(
+                User.builder()
+                        .username("author1")
+                        .password("Password123!")
+                        .nickname("수정작성자")
+                        .email("update@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 업데이트 대상 개시글 생성
+        Post post1 = postRepository.save(
+                Post.builder()
+                        .title("원래 제목")
+                        .content("원래 내용")
+                        .displayNumber(1L)
+                        .author(author)
+                        .build()
+        );
+
+        Long postId = post1.getId();
+
+        // [GIVEN-3] 수정할 제목 & 내용 준비
+        String newTitle = "새로운 제목";
+        String newContent = "새로운 내용";
+
+        // [WHEN] PUT /posts/{id}?title=...&content=... 요청 전송
+        var resultAction = mockMvc.perform(
+                put("/posts/{id}", postId)
+                        .param("title", newTitle)
+                        .param("content", newContent)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-1] 응답 코드 및 ApiResponse 구조 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 수정 성공"))
+                // 수정된 제목, 내용 이 응답에 반영되었는지 확인
+                .andExpect(jsonPath("$.data.id").value(postId.intValue()))
+                .andExpect(jsonPath("$.data.title").value(newTitle))
+                .andExpect(jsonPath("$.data.content").value(newContent))
+                .andExpect(jsonPath("$.data.authorName").value("수정작성자"));
+                // ↑ 작성자 닉네임 유지 확인
+
+        // [THEN-2] DB에서 제목 내용 수정 2차 검증
+        Post updatedPost = postRepository.findById(postId).orElseThrow();
+        assertThat(updatedPost.getTitle()).isEqualTo(newTitle);
+        assertThat(updatedPost.getContent()).isEqualTo(newContent);
+    }
 }
