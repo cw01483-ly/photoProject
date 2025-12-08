@@ -1,5 +1,6 @@
 package com.example.demo.domain.post.controller;
 
+import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository; // 게시글 DB 검증용
 import com.example.demo.domain.user.entity.User;              // 작성자 엔티티
 import com.example.demo.domain.user.repository.UserRepository;
@@ -12,6 +13,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+
 
 import static org.assertj.core.api.Assertions.assertThat; // DB 검증용
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post; // POST / 요청 생성 헬퍼
@@ -109,6 +112,60 @@ public class PostControllerTest {
         long postCount = postRepository.count(); // 현재 Post 테이블의 전체 개수
         assertThat(postCount).isGreaterThanOrEqualTo(1); // 적어도 1개 이상 존재
         // (주의: data.sql 등으로 초기 데이터가 있을 수 있으므로 "== 1" 보다는 >= 1로 검증)
+
+    }
+    /* 추가 예정 시나리오
+        - getPosts_success()
+        - getPostsByAuthor_success()
+        - searchPosts_success()
+        - updatePost_success()
+        - deletePost_success()
+        - togglePostLike_success(), getPostLikeCount_success()
+    */
+
+
+    // ⭐ 게시글 단건 조회 성공 테스트 (GET /posts/{id})
+    @Test
+    @DisplayName("게시글 단건 조회 성공 : GET /posts/{id} 호출 시 200과 PostResponseDto 반환")
+    void getPostById_success() throws Exception{
+        // [GIVEN-1] 게시글 작성자 생성
+        User author = userRepository.save(
+                User.builder()
+                        .username("postauthor1")
+                        .password("Password123!")
+                        .nickname("조회작성자")
+                        .email("author@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 게시글 저장 (처음 조회수 0)
+        Post savedPost = postRepository.save(
+                Post.builder()
+                        .title("테스트제목")
+                        .content("테스트 내용")
+                        .author(author)
+                        .displayNumber(1L)// displayNumber는 내부 정렬용 번호라 임의 값 사용 OK
+                        .build()
+        );
+        Long postId = savedPost.getId(); // GET 요청할 게시글 ID
+
+        // [WHEN] GET /posts/{id} 요청 보내기
+        var resultAction = mockMvc.perform(
+                get("/posts/{id}", postId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] 응답코드 + ApiResponse 구조 + 반환 DTO 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 단건 조회 성공"))
+                .andExpect(jsonPath("$.data.id").value(postId.intValue()))
+                .andExpect(jsonPath("$.data.title").value("테스트제목"))
+                .andExpect(jsonPath("$.data.content").value("테스트 내용"))
+                .andExpect(jsonPath("$.data.authorName").value("조회작성자"))
+                .andExpect(jsonPath("$.data.views").value(1))
+                .andExpect(jsonPath("$.data.likeCount").value(0));
 
     }
 }
