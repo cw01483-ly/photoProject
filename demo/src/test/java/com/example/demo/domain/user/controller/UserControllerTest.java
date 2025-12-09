@@ -112,7 +112,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 로그인 성공 테스트 (POST /api/users/login)
     @Test
     @DisplayName("로그인 성공 : 올바른 username,pw 로그인 시 200과 UserResponseDto 반환")
@@ -187,7 +186,7 @@ public class UserControllerTest {
         );
 
         // [WHEN] GET /api/users/{id} 요청 전송 (관리자 권한)
-        var  resultAction = mockMvc.perform(
+        var resultAction = mockMvc.perform(
                 get("/api/users/{id}", user.getId())
                         .accept(MediaType.APPLICATION_JSON));
 
@@ -230,7 +229,7 @@ public class UserControllerTest {
         );
 
         // [WHEN] 2) 관리자 권한으로 GET /api/users 요청, body가 없는 GET 요청 >> .content() 필요 없음
-        var  resultAction = mockMvc.perform(
+        var resultAction = mockMvc.perform(
                 get("/api/users") // GET /api/users
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());// 콘솔창에 조회한 데이터 출력
@@ -248,7 +247,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ username 기준 조회 테스트 ( GET /api/users/username/{username} ) - 관리자 권한 성공 케이스
     @Test
     @DisplayName("username 조회 성공 : 관리자가 GET /api/users/username/{username} 호출 시 200과 UserResponseDto 반환")
@@ -256,7 +254,7 @@ public class UserControllerTest {
     void getByUsername_success_asAdmin() throws Exception {
 
         // [GIVEN] 조회 대상 사용자 생성
-        User saved =  userRepository.save(
+        User saved = userRepository.save(
                 User.builder()
                         .username("finduser1")
                         .password(passwordEncoder.encode("Password1!"))
@@ -427,7 +425,7 @@ public class UserControllerTest {
                 // [THEN] 2) 공통 응답 포맷(ApiResponse)에서 success가 false 이어야 함
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").isNotEmpty());
-                // 메시지가 존재하는지 확인 (정확한 문구는 GlobalExceptionHandler 구현에 따라 다를 수 있으므로)
+        // 메시지가 존재하는지 확인 (정확한 문구는 GlobalExceptionHandler 구현에 따라 다를 수 있으므로)
     }
 
 
@@ -485,7 +483,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("전체 조회 실패 : 일반 USER가 GET /api/users 호출 시 403 Forbidden 반환")
     @WithMockUser(username = "normalUser", roles = {"USER"})
-
     void getAll_forbidden_whenNotAdmin() throws Exception {
 
         // [GIVEN] 관리자 전용 API라 DB에 사용자를 만들 필요 없음
@@ -499,7 +496,7 @@ public class UserControllerTest {
         // [THEN] 권한이 충족하지 못하므로 상태코드 403 기대
         resultAction
                 .andExpect(status().isForbidden()); //HTTP 상태 코드가 403 Forbidden 인지 확인
-                 // 응답 Body 구조는 Spring Security가 기본 처리하므로 상태 코드만 검증
+        // 응답 Body 구조는 Spring Security가 기본 처리하므로 상태 코드만 검증
     }
 
 
@@ -563,7 +560,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 닉네임 수정 권한 실패 테스트 ( PATCH /api/users/{id}/nickname ) - 일반 USER가 다른 사람 닉네임 수정 시 실패
     @Test
     @DisplayName("닉네임 수정 실패 : 일반 USER가 다른 사용자 닉네임 PATCH 시 권한 부족으로 실패")
@@ -618,7 +614,6 @@ public class UserControllerTest {
         resultAction
                 .andExpect(status().isForbidden());
     }
-
 
 
     // ⭐ 이메일 수정 권한 실패 테스트 (PATCH /api/users/{id}/email) - 일반 USER가 다른 사람 이메일 수정 시 실패
@@ -676,7 +671,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 회원 삭제 권한 실패 테스트 (DELETE /api/users/{id}) - 일반 USER가 다른 사람 삭제 시 실패
     @Test
     @DisplayName("회원 삭제 실패 : 일반 USER가 다른 사용자 DELETE 시 권한 부족으로 실패")
@@ -730,7 +724,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 회원가입 검증 실패 테스트 (이메일 형식 오류) - POST /api/users
     @Test
     @DisplayName("회원가입 실패 : 잘못된 이메일 형식으로 요청 시 400 Bad Request와 실패 응답 반환")
@@ -772,7 +765,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 회원가입 검증 실패 테스트 (username 공백) - POST /api/users
     @Test
     @DisplayName("회원가입 실패 : username이 공백일 때 400 Bad Request와 실패 응답 반환")
@@ -806,7 +798,6 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").isNotEmpty()); // 어떤 에러 메시지든 비어있지 않으면 OK
     }
-
 
 
     // ⭐ 회원가입 검증 실패 테스트 (비밀번호 규칙 위반) - POST /api/users
@@ -844,7 +835,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 로그인 실패 테스트 1 : username 공백으로 인한 검증 실패 (400 Bad Request)
     @Test
     @DisplayName("로그인 실패 : username 공백이면 400 Bad Request와 실패 응답 반환")
@@ -871,7 +861,6 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").isNotEmpty());  // 에러 메시지가 비어있지 않으면 OK
     }
-
 
 
     // ⭐ 로그인 실패 테스트 2 : 존재하지 않는 username으로 로그인 시도 (400 Bad Request)
@@ -908,7 +897,6 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message")
                         .value("아이디 또는 비밀번호를 확인해주세요."));
     }
-
 
 
     // ⭐ 로그인 실패 테스트 3 : 비밀번호 불일치 (400 Bad Request)
@@ -959,7 +947,6 @@ public class UserControllerTest {
     }
 
 
-
     // ⭐ 로그인 실패 테스트 4 : password 공백으로 인한 검증 실패 (400 Bad Request)
     @Test
     @DisplayName("로그인 실패 : Pw 공백이면 400 Bad Request와 실패 응답 반환")
@@ -985,6 +972,39 @@ public class UserControllerTest {
                 .andExpect(status().isBadRequest())        // 400
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").isNotEmpty());  // 에러 메시지가 비어있지 않으면 OK
+    }
+
+
+    // ⭐ 닉네임 수정 검증 실패 테스트 (PATCH /api/users/{id}/nickname) - nickname 공백
+    @Test
+    @DisplayName("닉네임 수정 실패 : nickname 공백, 400 Bad Request와 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    // 관리자 권한으로 접근 (권한 문제 X)
+    void updateNickname_Fail_blankNickname_return400() throws Exception {
+
+        // [GIVEN] nickname 값이 공백("")인 요청 바디 준비
+        Map<String, String> requestBody = Map.of("nickname", "");
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        // [WHEN] PATCH /api/users/{id}/nickname 요청 전송
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/nickname", 1L) // id는 아무 값이나 사용 가능 (검증 단계에서 막힘)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            기대 시나리오
+            - @Valid + @NotBlank 에 의해 MethodArgumentNotValidException 발생
+            - GlobalExceptionHandler.handleValidationException(...)에서
+              HTTP 400 + ApiResponse.fail(...) 공통 포맷으로 응답
+         */
+        resultAction
+                .andExpect(status().isBadRequest())          // 400 Bad Request
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty()); // 에러 메시지가 비어있지 않으면 OK
     }
 
 }
