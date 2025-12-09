@@ -115,7 +115,7 @@ public class PostControllerTest {
     }
 
 
-    
+
     // ⭐ 게시글 단건 조회 성공 테스트 (GET /posts/{id})
     @Test
     @DisplayName("게시글 단건 조회 성공 : GET /posts/{id} 호출 시 200과 PostResponseDto 반환")
@@ -619,5 +619,35 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.userId").value(userId.intValue()))
                 .andExpect(jsonPath("$.data.liked").value(false)) // 두 번째 토글 liked = false
                 .andExpect(jsonPath("$.data.likeCount").value(0)); // likeCount 0
+    }
+
+
+
+    // ⭐ 게시글 단건 조회 실패 테스트 (GET /posts/{id} - 존재하지 않는 ID)
+    @Test
+    @DisplayName("게시글 단건 조회 실패 : 존재하지 않는 ID로 조회 시 에러 응답 반환")
+    void getPostById_notFound() throws Exception{
+        // [GIVEN] 존재하지 않는 ID 준비
+        Long notExistingId = 9999999L;
+
+        // [WHEN] GET /posts/{id} 요청 (존재 X)
+        var resultAction = mockMvc.perform(
+                get("/posts/{postId}", notExistingId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] 응답 코드, GlobalExceptionHandler + ApiResponse 구조 검증
+        resultAction
+                .andExpect(status().isBadRequest()) // IllegalArgumentException >> 400 Bad Request
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message") // 최상위 ApiResponse 필드 검증
+                        .value("게시글을 찾을 수 없습니다. id="  + notExistingId))
+                // ↓ data 속 ErrorResponse 구조 검증
+                .andExpect(jsonPath("$.data.success").value(false))
+                .andExpect(jsonPath("$.data.status").value(400))
+                .andExpect(jsonPath("$.data.message")
+                        .value("게시글을 찾을 수 없습니다. id=" + notExistingId))
+                .andExpect(jsonPath("$.data.path")
+                        .value("/posts/" + notExistingId));
     }
 }
