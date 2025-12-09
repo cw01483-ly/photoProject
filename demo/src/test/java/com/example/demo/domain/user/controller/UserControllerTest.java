@@ -771,4 +771,40 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty());// 에러 메시지가 비어있지 않은지만 확인
     }
 
+
+
+    // ⭐ 회원가입 검증 실패 테스트 (username 공백) - POST /api/users
+    @Test
+    @DisplayName("회원가입 실패 : username이 공백일 때 400 Bad Request와 실패 응답 반환")
+    void register_validationFail_blankUsername_return400() throws Exception {
+        // [GIVEN] username이 공백("")인 회원가입 요청 DTO 생성
+        UserSignupRequestDto requestDto = UserSignupRequestDto.builder()
+                .username("")                    // ❌ 공백 username
+                .password("Password1@")          // 나머지는 유효한 값
+                .nickname("검증실패닉")
+                .email("example@example.com")
+                .build();
+
+        // DTO -> JSON 문자열 변환
+        String json = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN] 잘못된 username을 포함한 JSON으로 POST /api/users 요청 전송
+        var resultAction = mockMvc.perform(
+                post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            - @Valid + @NotBlank 에 의해 MethodArgumentNotValidException 발생
+            - GlobalExceptionHandler.handleValidationException(...)에서 400 + ApiResponse.fail(...) 반환
+         */
+        resultAction
+                .andExpect(status().isBadRequest())      // HTTP 400 Bad Request
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty()); // 어떤 에러 메시지든 비어있지 않으면 OK
+    }
+
 }
