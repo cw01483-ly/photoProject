@@ -1042,7 +1042,7 @@ public class UserControllerTest {
 
     // ⭐ 닉네임 수정 실패 테스트 (중복 닉네임) - PATCH /api/users/{id}/nickname
     @Test
-    @DisplayName("닉네임 수정 실패 : 이미 사용 중인 닉네임으로 PATCH 시 400과 실패 응답 반환")
+    @DisplayName("닉네임 수정 실패 : 중복 닉네임으로 PATCH 시 400과 실패 응답 반환")
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void updateNickname_duplicateNickname_return400() throws Exception {
 
@@ -1090,6 +1090,58 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
                         .value("이미 사용 중인 닉네임입니다: 중복닉네임"));
+    }
+
+
+
+    // ⭐ 이메일 수정 실패 테스트 (중복 이메일) - PATCH /api/users/{id}/email
+    @Test
+    @DisplayName("이메일 수정 실패 : 중복 이메일로 PATCH 시 400과 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"}) // 관리자 권한
+    void updateEmail_duplicateEmail_return400() throws Exception {
+
+        // [GIVEN-1] 이메일이 겹칠 두 사용자 생성
+        User targetUser = userRepository.save(
+                User.builder()
+                        .username("emailTargetUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("이메일타겟")
+                        .email("target@example.com")
+                        .build()
+        );
+        User conflictUser = userRepository.save(
+                User.builder()
+                        .username("emailConflictUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("이메일중복유저")
+                        .email("dup@example.com")
+                        .build()
+        );
+        Long targetId = targetUser.getId();
+
+        // [GIVEN-2] targetUser의 이메일을 "dup@example.com" 으로 바꾸려는 요청 JSON
+        Map<String, String> requestBody = Map.of("email", "dup@example.com");
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        // [WHEN] PATCH /api/users/{id}/email 요청
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/email", targetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            UserService.updateEmail(...)
+            - 다른 사용자가 이미 해당 이메일 사용 중이면 IllegalStateException("이미 사용 중인 이메일입니다: ...")
+            - GlobalExceptionHandler.handleIllegalStateException(...) → 400 + ApiResponse.fail(...)
+         */
+        resultAction
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("이미 사용 중인 이메일입니다: dup@example.com"));
     }
 
 }
