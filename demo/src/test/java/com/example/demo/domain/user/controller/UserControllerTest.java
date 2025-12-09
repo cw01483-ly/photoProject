@@ -958,4 +958,33 @@ public class UserControllerTest {
                         .value("아이디 또는 비밀번호를 확인해주세요."));
     }
 
+
+
+    // ⭐ 로그인 실패 테스트 4 : password 공백으로 인한 검증 실패 (400 Bad Request)
+    @Test
+    @DisplayName("로그인 실패 : Pw 공백이면 400 Bad Request와 실패 응답 반환")
+    void login_Fail_blankPassword_return400() throws Exception {
+        // [GIVEN] password가 공백인 로그인 요청 DTO
+        UserLoginRequestDto loginRequest = UserLoginRequestDto.builder()
+                .username("loginuser1")
+                .password("")
+                .build();
+
+        String json = objectMapper.writeValueAsString(loginRequest);
+
+        // [WHEN] POST /api/users/login 요청
+        var resultAction = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] @Valid + @NotBlank → MethodArgumentNotValidException → 400
+        resultAction
+                .andExpect(status().isBadRequest())        // 400
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());  // 에러 메시지가 비어있지 않으면 OK
+    }
+
 }
