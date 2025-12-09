@@ -424,7 +424,7 @@ public class PostControllerTest {
 
     // ⭐ 게시글 삭제 성공 테스트 (DELETE /posts/{id})
     @Test
-    @DisplayName("게시글 삭제 성공 : ELETE /posts/{id} 호출 시 200, 완료 메시지 반환")
+    @DisplayName("게시글 삭제 성공 : DELETE /posts/{id} 호출 시 200, 완료 메시지 반환")
     void deletePost_success() throws Exception{
         // [GIVEN-1] 작성자 생성
         User author = userRepository.save(
@@ -462,5 +462,50 @@ public class PostControllerTest {
         // [THEN-2] DB에서 해당 게시글 삭제 2차 검증
         boolean exists = postRepository.existsById(postId); //삭제 후 존재 확인
         assertThat(exists).isFalse();
+    }
+
+
+    // ⭐ 게시글 좋아요 토글 성공 테스트 (POST /posts/{postId}/likes)
+    @Test
+    @DisplayName("게시글 좋아요 토글 성공 : 처음 호출 시 liked=true, likeCount=1 반환")
+    void togglePostLike_success() throws Exception{
+        // [GIVEN-1] 사용자 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("user1")
+                        .password("Password123!")
+                        .nickname("usernick")
+                        .email("like@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 게시글 생성
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("제목")
+                        .content("내용")
+                        .displayNumber(1L)
+                        .author(user)
+                        .build()
+        );
+        Long userId = user.getId(); // 사용자 ID
+        Long postId = post.getId(); // 게시글 ID
+
+        // [WHEN] POST /posts/{postId}/likes?userId=... 요청 전송 (처음 호출 >> 좋아요 ON 상태 예상)
+        var resultAction = mockMvc.perform(
+                post("/posts/{id}/likes", postId)
+                        .param("userId", userId.toString())
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] 응답 코드 + ApiResponse 구조 + DTO 필드 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
+                .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
+                .andExpect(jsonPath("$.data.userId").value(userId.intValue()))
+                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.likeCount").value(1)); // 첫토글 = likeCount 1
     }
 }
