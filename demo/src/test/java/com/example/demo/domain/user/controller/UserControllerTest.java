@@ -909,4 +909,53 @@ public class UserControllerTest {
                         .value("아이디 또는 비밀번호를 확인해주세요."));
     }
 
+
+
+    // ⭐ 로그인 실패 테스트 3 : 비밀번호 불일치 (400 Bad Request)
+    @Test
+    @DisplayName("로그인 실패 : 비밀번호 틀리면 400과 메시지 반환")
+    void login_fail_wrongPassword_return400() throws Exception {
+
+        String rawPassword = "Password123!";
+        String encodedPassword = passwordEncoder.encode(rawPassword);
+        // [GIVEN-1] 사용자 1명 생성
+        User saved = userRepository.save(
+                User.builder()
+                        .username("loginfailuser1")
+                        .password(encodedPassword) // 인코딩된 비밀번호
+                        .nickname("로그인실패유저")
+                        .email("loginfail@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 틀린 비밀번호로 로그인 요청 DTO 생성
+        UserLoginRequestDto loginRequest = UserLoginRequestDto.builder()
+                .username("loginfailuser1")
+                .password("WrongPassword1!")
+                .build();
+
+        String json = objectMapper.writeValueAsString(loginRequest);
+
+        // [WHEN] POST /api/users/login 요청
+        var resultAction = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            UserService.login()
+            - username으로는 User 조회 성공
+            - passwordEncoder.matches(...) 가 false → IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.")
+            - GlobalExceptionHandler.handleIllegalArgumentException() >> 400 + ApiResponse.fail(...)
+         */
+        resultAction
+                .andExpect(status().isBadRequest()) // 400
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("아이디 또는 비밀번호를 확인해주세요."));
+    }
+
 }
