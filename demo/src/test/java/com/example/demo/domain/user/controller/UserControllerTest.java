@@ -807,4 +807,39 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty()); // 어떤 에러 메시지든 비어있지 않으면 OK
     }
 
+
+
+    // ⭐ 회원가입 검증 실패 테스트 (비밀번호 규칙 위반) - POST /api/users
+    @Test
+    @DisplayName("회원가입 실패 : 비밀번호 규칙 위반 시 400 BadRequest, 실패 응답 반환")
+    void register_Fail_invalidPassword_return400() throws Exception {
+        // [GIVEN] 비밀번호 규칙 위반 User 생성
+        UserSignupRequestDto requestDto = UserSignupRequestDto.builder()
+                .username("normalUser1")
+                .password("d1@") // Pw길이 위반, 공백 포함
+                .nickname("닉네임1")
+                .email("fail@example.com")
+                .build();
+
+        // DTO -> JSON 문자열 변환
+        String json = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN] 잘못된 Pw를 포함한 JSON으로 POST /api/users 요청 전송
+        var resultAction = mockMvc.perform(
+                post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            - password 필드의 @Pattern / @Size 중 하나가 위반 → MethodArgumentNotValidException
+            - GlobalExceptionHandler에서 400 + ApiResponse.fail(...) 형태로 응답
+         */
+        resultAction
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty()); // 에러메시지 비어있지 않은지 확인
+    }
 }
