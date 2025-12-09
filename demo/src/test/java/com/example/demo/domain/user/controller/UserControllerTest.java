@@ -1038,4 +1038,58 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
+
+
+    // ⭐ 닉네임 수정 실패 테스트 (중복 닉네임) - PATCH /api/users/{id}/nickname
+    @Test
+    @DisplayName("닉네임 수정 실패 : 이미 사용 중인 닉네임으로 PATCH 시 400과 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void updateNickname_duplicateNickname_return400() throws Exception {
+
+        // [GIVEN-1] 닉네임을 중복해서 사용할 두 사용자 생성
+
+        User targetUser = userRepository.save(
+                User.builder()
+                        .username("targetUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("원래닉네임")
+                        .email("target@example.com")
+                        .build()
+        );
+
+        User conflictUser = userRepository.save(
+                User.builder()
+                        .username("conflictUser1")
+                        .password(passwordEncoder.encode("Password1!"))
+                        .nickname("중복닉네임")
+                        .email("conflict@example.com")
+                        .build()
+        );
+        Long targetId = targetUser.getId();
+
+        // [GIVEN-2] targetUser의 닉네임을 "중복닉네임" 으로 바꾸려는 요청 JSON
+        Map<String, String> requestBody = Map.of("nickname", "중복닉네임");
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        // [WHEN] PATCH /api/users/{id}/nickname 요청 (관리자 권한)
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/nickname", targetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            UserService.updateNickname(...)
+            - 다른 사용자가 이미 해당 닉네임 사용 중이면 IllegalStateException("이미 사용 중인 닉네임입니다: ...")
+            - GlobalExceptionHandler.handleIllegalStateException(...) → 400 + ApiResponse.fail(...)
+         */
+        resultAction
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("이미 사용 중인 닉네임입니다: 중복닉네임"));
+    }
+
 }
