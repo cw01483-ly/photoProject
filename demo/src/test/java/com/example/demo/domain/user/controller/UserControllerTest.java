@@ -872,4 +872,41 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty());  // 에러 메시지가 비어있지 않으면 OK
     }
 
+
+
+    // ⭐ 로그인 실패 테스트 2 : 존재하지 않는 username으로 로그인 시도 (400 Bad Request)
+    @Test
+    @DisplayName("로그인 실패 : 없는 username으로 로그인 시 400과 메시지 반환")
+    void login_fail_notExistingUsername_return400() throws Exception {
+        // [GIVEN] DB에 없는 username으로 로그인 요청 DTO 생성
+        UserLoginRequestDto loginRequest = UserLoginRequestDto.builder()
+                .username("no_such_user")
+                .password("Password123!")
+                .build();
+
+        String json = objectMapper.writeValueAsString(loginRequest);
+
+        // [WHEN] POST /api/users/login 요청
+        var resultAction = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            UserService.login() 흐름
+            - userRepository.findByUsername(...) 에서 사용자 못 찾으면
+              >> IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.") 발생
+            - GlobalExceptionHandler.handleIllegalArgumentException() 에서
+              >> HTTP 400 + ApiResponse.fail(...) 응답
+         */
+        resultAction
+                .andExpect(status().isBadRequest())  // 400
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("아이디 또는 비밀번호를 확인해주세요."));
+    }
+
 }
