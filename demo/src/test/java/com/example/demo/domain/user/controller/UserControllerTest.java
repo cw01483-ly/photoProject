@@ -988,7 +988,7 @@ public class UserControllerTest {
 
         // [WHEN] PATCH /api/users/{id}/nickname 요청 전송
         var resultAction = mockMvc.perform(
-                patch("/api/users/{id}/nickname", 1L) // id는 아무 값이나 사용 가능 (검증 단계에서 막힘)
+                patch("/api/users/{id}/nickname", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
                         .accept(MediaType.APPLICATION_JSON)
@@ -1004,7 +1004,38 @@ public class UserControllerTest {
         resultAction
                 .andExpect(status().isBadRequest())          // 400 Bad Request
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").isNotEmpty()); // 에러 메시지가 비어있지 않으면 OK
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+
+
+    // ⭐ 이메일 수정 검증 실패 테스트 (PATCH /api/users/{id}/email) - 이메일 형식 오류
+    @Test
+    @DisplayName("이메일 수정 실패 : 잘못된 이메일 형식, 400 Bad Request와 실패 응답 반환")
+    @WithMockUser(username = "admin", roles = {"ADMIN"}) // 관리자 권한
+    void updateEmail_Fail_invalidEmail_return400() throws Exception {
+
+        // [GIVEN] 잘못된 이메일 형식의 요청 바디 준비
+        Map<String, String> requestBody = Map.of("email", "not-an-email");
+        String json = objectMapper.writeValueAsString(requestBody);
+
+        // [WHEN] PATCH /api/users/{id}/email 요청 전송
+        var resultAction = mockMvc.perform(
+                patch("/api/users/{id}/email", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN]
+        /*
+            - @Email 검증 실패 → MethodArgumentNotValidException
+            - GlobalExceptionHandler.handleValidationException(...) → 400 + ApiResponse.fail(...)
+         */
+        resultAction
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
 }
