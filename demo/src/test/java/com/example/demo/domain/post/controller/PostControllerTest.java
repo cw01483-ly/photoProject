@@ -113,11 +113,9 @@ public class PostControllerTest {
         // (주의: data.sql 등으로 초기 데이터가 있을 수 있으므로 "== 1" 보다는 >= 1로 검증)
 
     }
-    /* 추가 예정 시나리오
-        - togglePostLike_success(), getPostLikeCount_success()
-    */
 
 
+    
     // ⭐ 게시글 단건 조회 성공 테스트 (GET /posts/{id})
     @Test
     @DisplayName("게시글 단건 조회 성공 : GET /posts/{id} 호출 시 200과 PostResponseDto 반환")
@@ -557,5 +555,69 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.message").value("게시글 좋아요 개수 조회 성공"))
                 .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
                 .andExpect(jsonPath("$.data.likeCount").value(1));//눌린 좋아요 수 출력
+    }
+
+
+
+    // ⭐ 게시글 좋아요 토글 2번 호출 시 최종 liked=false, likeCount=0 이어야 하는 테스트
+    @Test
+    @DisplayName("게시글 좋아요 토글 2회 호출 시 좋아요가 취소되고 likeCount=0 반환")
+    void togglePostLike_twice_success() throws Exception{
+        // [GIVEN-1] 사용자 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("user1")
+                        .password("Password123!")
+                        .nickname("usernick")
+                        .email("like@like.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 게시글 생성
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("제목")
+                        .content("내용")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Long postId = post.getId();
+        Long userId = user.getId();
+
+        // [WHEN-1] 첫 번째 토글 호출 -> likeCount 증가
+        var firstToggle = mockMvc.perform(
+                post("/posts/{postId}/likes", postId)
+                        .param("userId", userId.toString()) //쿼리 파라미터 userId
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+
+        // [THEN-1] 첫 번째 요청 검증
+        firstToggle
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
+                .andExpect(jsonPath("$.data.postId").value(postId.intValue())) // postId 일치
+                .andExpect(jsonPath("$.data.userId").value(userId.intValue())) // userId 일치
+                .andExpect(jsonPath("$.data.liked").value(true)) // 첫 토글 liked = true
+                .andExpect(jsonPath("$.data.likeCount").value(1)); // likeCount 1
+
+        // [WHEN-2] 두 번째 토글 호출 -> likeCount 감소
+        var secondToggle = mockMvc.perform(
+                post("/posts/{postId}/likes", postId)
+                        .param("userId", userId.toString())
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-2] 두 번째 요청 검증
+        secondToggle
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
+                .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
+                .andExpect(jsonPath("$.data.userId").value(userId.intValue()))
+                .andExpect(jsonPath("$.data.liked").value(false)) // 두 번째 토글 liked = false
+                .andExpect(jsonPath("$.data.likeCount").value(0)); // likeCount 0
     }
 }
