@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
         // body에 ErrorResponse 객체를 담아 ApiResponse 포맷으로 반환 -> JSON으로 변환되어 나감.
     }
 
-    /* 2) IllegalArgumentException 처리 메서드
+    /* 2-1) IllegalArgumentException 처리 메서드
         - 서비스 레이어에서 throw new IllegalArgumentException() 한 경우 호출
         - 이 메서드가 그 예외를 잡아 400코드 + 예외메시지(JSON) 형식으로 응답
     */
@@ -84,11 +84,11 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex, //발생한 예외 객체( 예 : ex.getMessage() )
             HttpServletRequest request   // 요청 정보
     ){
-        // 2-1) 서버 로그에 경고 레벨로 남기기
+        // 2-1-1) 서버 로그에 경고 레벨로 남기기
         log.warn("요청 처리 중 잘못된 인자 -path={}, message={}",
                 request.getRequestURI(),
                 ex.getMessage());
-        // 2-2) 응답 바디로 사용할 ErrorResponse 객체 생성
+        // 2-1-2) 응답 바디로 사용할 ErrorResponse 객체 생성
         ErrorResponse body = ErrorResponse.builder()
                 .success(false)                          // 실패이므로 false
                 .status(HttpStatus.BAD_REQUEST.value())  // 400
@@ -96,12 +96,43 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())           // 에러가 발생한 요청 경로
                 .timestamp(LocalDateTime.now())          // 현재 시간
                 .build();
-        // 2-3) 400 상태코드와 함께 ErrorResponse를 응답으로 반환,
+        // 2-1-3) 400 상태코드와 함께 ErrorResponse를 응답으로 반환,
         // ApiResponse.fail(...)로 감싸 공통 포맷 유지
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(body, ex.getMessage()));
     }
+
+    /* 2-2) IllegalStateException 처리 메서드
+    - 서비스 레이어에서 throw new IllegalStateException(...) 한 경우 호출
+    - ex) 닉네임/이메일 중복 등 비즈니스 로직 위반
+    - 400 Bad Request + 에러 메시지(JSON) 형식으로 응답
+ */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleIllegalStateException(
+            IllegalStateException ex,
+            HttpServletRequest request
+    ) {
+        // 서버 로그에는 경고 레벨로 남기기
+        log.warn("요청 처리 중 잘못된 상태 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        // 클라이언트에게 내려줄 에러 응답 본문 생성
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)                          // 실패
+                .status(HttpStatus.BAD_REQUEST.value())  // 400
+                .message(ex.getMessage())                // 예외에 담긴 메시지 그대로 사용
+                .path(request.getRequestURI())           // 에러 발생한 요청 경로
+                .timestamp(LocalDateTime.now())          // 발생 시각
+                .build();
+
+        // 400 상태코드 + 공통 실패 포맷(ApiResponse.fail)으로 감싸서 반환
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(body, ex.getMessage()));
+    }
+
 
     /* 3) 그 외 처리하지 않은 모든 예외 처리 메서드
         - 위에서 지정한 예외를 제외한 나머지 예외들인 경우 해당 메서드 사용
