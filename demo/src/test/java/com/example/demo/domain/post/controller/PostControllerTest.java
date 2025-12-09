@@ -114,7 +114,6 @@ public class PostControllerTest {
 
     }
     /* 추가 예정 시나리오
-        - deletePost_success()
         - togglePostLike_success(), getPostLikeCount_success()
     */
 
@@ -419,5 +418,49 @@ public class PostControllerTest {
         Post updatedPost = postRepository.findById(postId).orElseThrow();
         assertThat(updatedPost.getTitle()).isEqualTo(newTitle);
         assertThat(updatedPost.getContent()).isEqualTo(newContent);
+    }
+
+
+
+    // ⭐ 게시글 삭제 성공 테스트 (DELETE /posts/{id})
+    @Test
+    @DisplayName("게시글 삭제 성공 : ELETE /posts/{id} 호출 시 200, 완료 메시지 반환")
+    void deletePost_success() throws Exception{
+        // [GIVEN-1] 작성자 생성
+        User author = userRepository.save(
+                User.builder()
+                        .username("author1")
+                        .password("Password123!")
+                        .nickname("삭제작성자")
+                        .email("delete@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 삭제 대상 게시글 생성
+        Post post1 = postRepository.save(
+                Post.builder()
+                        .title("제목")
+                        .content("내용")
+                        .author(author)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Long postId = post1.getId(); // 삭제할 게시글 PK
+
+        // [WHEN] DELETE /posts/{id} 요청 전송
+        var resultAction = mockMvc.perform(
+                delete("/posts/{id}", postId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN-1] 응답 코드 & ApiResponse 기본 구조 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 삭제 성공"));
+
+        // [THEN-2] DB에서 해당 게시글 삭제 2차 검증
+        boolean exists = postRepository.existsById(postId); //삭제 후 존재 확인
+        assertThat(exists).isFalse();
     }
 }
