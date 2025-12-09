@@ -508,4 +508,54 @@ public class PostControllerTest {
                 .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1)); // 첫토글 = likeCount 1
     }
+
+
+
+    // ⭐ 게시글 좋아요 개수 조회 성공 테스트 (GET /posts/{postId}/likes/count)
+    @Test
+    @DisplayName("게시글 좋아요 개수 조회 성공 좋아요 1개인 게시글의 likeCount=1 반환")
+    void getPostLikeCount_success() throws Exception{
+        // [GIVEN-1] 사용자 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("user1")
+                        .password("Password123!")
+                        .nickname("usernick")
+                        .email("like@example.com")
+                        .build()
+        );
+
+        // [GIVEN-2] 게시글 생성
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("제목")
+                        .content("내용")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Long postId = post.getId();
+        Long userId = user.getId();
+
+        // [GIVEN-3] 게시글에 미리 LikeCount 추가
+        mockMvc.perform(
+                post("/posts/{postId}/likes", postId)
+                        .param("userId", userId.toString())
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [WHEN] GET /posts/{postId}/likes/count 요청 전송 (likeCount 조회 요청)
+        var resultAction = mockMvc.perform(
+                get("/posts/{postId}/likes/count", postId)
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andDo(print());
+
+        // [THEN] 응답 코드 + ApiResponse 구조 + DTO 필드 검증
+        resultAction
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("게시글 좋아요 개수 조회 성공"))
+                .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
+                .andExpect(jsonPath("$.data.likeCount").value(1));//눌린 좋아요 수 출력
+    }
 }
