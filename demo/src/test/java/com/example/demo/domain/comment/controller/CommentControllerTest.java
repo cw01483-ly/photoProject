@@ -451,7 +451,70 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 수정 실패 테스트
+    @Test
+    @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 400 Bad Request 발생")
+    void updateComment_Fail_notAuthor() throws Exception{
+        // [GIVEN] 작성자 유저, 다른 유저, 게시글, 댓글 1개 생성
+        User user1 = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname1")
+                        .email("email1@example.com")
+                        .build()
+        );
+        User user2 = userRepository.save(
+                User.builder()
+                        .username("username2")
+                        .password("Password123!")
+                        .nickname("nickname2")
+                        .email("email2@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user1)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user1)
+                        .content("수정 전")
+                        .build()
+        );
 
+        // 다른 사용자로 로그인한 것처럼 Principal 생성
+        TestUserDetails principal = new TestUserDetails(
+                user2.getId(),
+                user2.getUsername(),
+                user2.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER")) //권한 설정, 작성자가 아닌 일반 사용자
+        );
+
+        // 수정 요청 DTO (내용 변경)
+        CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
+                .content("수정 시도")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN] user2 가 user1의 댓글 수정 API 호출 >> 400 기대
+        mockMvc.perform(
+                patch("/api/comments/{commentId}", comment.getId())
+                        .with(user(principal)) // user2
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)
+        )
+                .andDo(print())
+                .andExpect(status().isBadRequest()) //400 Bad Request
+                .andExpect(jsonPath("$.success").value(false))// ApiResponse.success = false
+                .andExpect(jsonPath("$.data.message")
+                        .value("댓글 작성자만 댓글을 수정할 수 있습니다."));
+    }
 
 
 
