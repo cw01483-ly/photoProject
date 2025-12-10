@@ -518,7 +518,62 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 수정 실패 테스트
+    @Test
+    @DisplayName("댓글 수정 실패 : 내용이 공백이면 400 Bad Request가 발생")
+    void updateComment_fail_blankContent() throws Exception{
+        // [GIVEN] 유저, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("수정 전")
+                        .build()
+        );
 
+        // 로그인 유저 principal
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        // 요청 DTO
+        CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
+                .content(" ")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN] 공백 내용으로 수정 요청
+        mockMvc.perform(
+                patch("/api/comments/{commentId}", comment.getId())
+                        .with(user(principal)) // 로그인 작성자 본인
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)
+        )
+                .andDo(print())
+                .andExpect(status().isBadRequest()) // DTO @NotBlank 검증 실패
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.message")
+                        .value("댓글 내용은 공백일 수 없습니다."));
+    }
 
 
 
