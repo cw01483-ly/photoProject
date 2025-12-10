@@ -1,6 +1,7 @@
 package com.example.demo.domain.comment.controller;
 
 import com.example.demo.domain.comment.dto.CommentCreateRequestDto;
+import com.example.demo.domain.comment.dto.CommentUpdateRequestDto;
 import com.example.demo.domain.comment.entity.Comment;
 import com.example.demo.domain.comment.repository.CommentRepository;
 import com.example.demo.domain.post.entity.Post;
@@ -22,12 +23,14 @@ import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응�
 import org.springframework.transaction.annotation.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+
 import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -326,6 +329,77 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 수정 성공 테스트 (작성자 본인 댓글 내용을 수정)
+    @Test
+    @DisplayName("댓글 수정 성공 : 작성자가 자신의 댓글 내용을 수정, 200 OK와 수정된 댓글 데이터가 반환")
+    void updateComment_success() throws Exception{
+        // [GIVEN] 유저, 게시글, 댓글 1개 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("수정 전")
+                        .build()
+        );
+
+        // 로그인 유저 principal (작성자 본인)
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                // ↑ SecurityContext에 저장될 사용자 권한 목록 ROLE_USER 부여 >> 인증된 사용자 요청 보냄
+        );
+
+        // 수정 요청 DTO (댓글 내용만 바뀐다고 가정)
+        CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
+                .content("수정 후")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN] 댓글 수정 API 호출
+        mockMvc.perform(
+                patch("/api/comments/{commentId}", comment.getId())
+                        .with(user(principal)) //작성자 본인 요청
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(comment.getId().intValue()))
+                // ↑ 댓글 id가 DB에 저장된 comment id와 동일한지 검증
+                .andExpect(jsonPath("$.data.postId").value(post.getId().intValue()))
+                // ↑  응답 JSON postId 가 올바르게 매핑되었는지 확인
+                .andExpect(jsonPath("$.data.authorId").value(user.getId().intValue()))
+                // ↑  작성자 authorId 가 올바르게 매핑되었는지 확인
+                .andExpect(jsonPath("$.data.content").value("수정 후"));
+
+        // [THEN] DB 검증
+        Comment updatedComment = commentRepository.findById(comment.getId())
+                .orElseThrow(() -> new IllegalStateException("댓글이 DB에 존재하지 않습니다."));
+
+        // 실제 DB에도 내용이 수정되었는지 확인
+        assertThat(updatedComment.getContent()).isEqualTo("수정 후");
+        assertThat(updatedComment.getAuthor().getId()).isEqualTo(user.getId());
+        assertThat(updatedComment.getPost().getId()).isEqualTo(post.getId());
+    }
 
 
 
