@@ -403,8 +403,50 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 수정 실패 테스트
+    @Test
+    @DisplayName("댓글 수정 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
+    void updateComment_Fail_unauthenticated() throws Exception{
+        // [GIVEN] 유저, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("수정 전")
+                        .build()
+        );
 
+        // 비로그인 상태에서 보낼 수정 요청 본문 (JSON)
+        CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
+                .content("비로그인 수정 시도")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
 
+        // [WHEN & THEN] 로그인 없이 PATCH 요청 >> 401 기대
+        mockMvc.perform(
+                patch("/api/comments/{commentId}", comment.getId())// 댓글 수정 URL
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)// .with(user(principal)) X : 비로그인 상태
+        )
+                .andDo(print())
+                .andExpect(status().isUnauthorized()); // 401 Unauthorized
+    }
 
 
 
