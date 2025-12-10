@@ -30,8 +30,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 회원가입(POST /api/users), 로그인(POST /api/users/login) 은 비로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/users", "/api/users/login").permitAll()
+
+                        // 댓글 생성: 특정 게시글에 댓글 작성은 반드시 로그인 필요, POST /api/posts/{postId}/comments
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/comments").authenticated()
+
+                        // 댓글 수정: 본인 댓글만 수정 가능하도록, 최소한 로그인은 필수, PATCH /api/comments/{commentId}
+                        .requestMatchers(HttpMethod.PATCH, "/api/comments/*").authenticated()
+
+                        // 댓글 삭제: 본인 댓글만 삭제 가능하도록, 최소한 로그인은 필수, DELETE /api/comments/{commentId}
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
+
                         // 그 외 /api/users/**는 인증필요
                         .requestMatchers("/api/users/**").authenticated()
+
                         // 나머지는 임시로 모두 허용(추후 점진적 강화)
                         .anyRequest().permitAll()
                 )
