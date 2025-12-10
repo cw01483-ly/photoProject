@@ -19,6 +19,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
 import org.springframework.transaction.annotation.Transactional;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import java.util.Collection;
 import java.util.List;
@@ -219,6 +220,58 @@ public class CommentControllerTest {
                 )
                 .andDo(print())
                 .andExpect(status().isBadRequest()); // DTO 검증 실패 >> 400 응답 기대
+    }
+
+
+
+    // ⭐ 댓글 목록 조회 성공 테스트
+    @Test
+    @DisplayName("댓글 목록 조회 성공 : 특정 게시글 댓글 목록을 200 OK로 반환")
+    void getCommentsByPost_success() throws Exception {
+        // [GIVEN] 유저, 게시글, 댓글 2개 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("commentUser1")
+                        .password("Password123!")
+                        .nickname("닉네임1")
+                        .email("comment@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment1 = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("첫 번째")
+                        .build()
+        );
+        Comment comment2 = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("두 번째")
+                        .build()
+        );
+
+        // [WHEN & THEN] GET api/posts/{postId}/comments" 호출
+        mockMvc.perform(
+                get("/api/posts/{postId}/comments", post.getId())
+        )
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2)) //목록 크기 검증
+                .andExpect(jsonPath("$.data[0].content").value("두 번째"))// DESC정렬
+                .andExpect(jsonPath("$.data[1].content").value("첫 번째"))// DESC정렬
+                .andExpect(jsonPath("$.data[0].postId").value(post.getId().intValue()))
+                .andExpect(jsonPath("$.data[1].postId").value(post.getId().intValue()));
     }
 
 
