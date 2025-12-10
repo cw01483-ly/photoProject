@@ -132,6 +132,85 @@ public class CommentControllerTest {
         assertThat(savedComment.getAuthor().getId()).isEqualTo(user.getId());
     }
 
+
+
+    // ⭐ 댓글 생성 실패 테스트 (로그인하지 않은 사용자)
+    @Test
+    @DisplayName("댓글 생성 실패 - 로그인하지 않은 사용자는 401 Unauthorized가 발생")
+    void createComment_fail_unauthenticated() throws Exception {
+        // [GIVEN] 유저, 게시글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("commentUser1")
+                        .password("Password123!")
+                        .nickname("닉네임1")
+                        .email("login@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("제목")
+                        .content("내용")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+
+        // 요청 DTO (Comment)
+        CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
+                .content("비로그인 댓글")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN]
+        mockMvc.perform(
+                post("/api/posts/{postId}/comments", post.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody) // 로그인 정보 X
+        )
+            .andDo(print())
+            .andExpect(status().isUnauthorized()); // 기대결과 401 Unauthorized
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /*
         테스트용 UserDetails 구현체
 
