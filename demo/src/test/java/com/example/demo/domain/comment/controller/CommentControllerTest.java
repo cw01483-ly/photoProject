@@ -742,6 +742,47 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 삭제 실패 테스트
+    @Test
+    @DisplayName("댓글 삭제 실패 : 존재하지 않는 댓글 ID 삭제 시 400 Bad Request 반환")
+    void deleteComment_fail_notFoundComment() throws Exception {
+        // [GIVEN] 유저 1명 생성 (로그인용)
+        User user = userRepository.save(
+                User.builder()
+                        .username("testUser1")
+                        .password("Password123!")
+                        .nickname("닉네임1")
+                        .email("test@example.com")
+                        .build()
+        );
+
+        // 로그인 principal 생성
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        // 존재하지 않는 댓글 ID 지정
+        Long invalidCommentId = 9999999L;
+
+        // [WHEN & THEN] 존재하지 않는 댓글 삭제 시도 → 400 Bad Request
+        mockMvc.perform(
+                        delete("/api/comments/{commentId}", invalidCommentId)
+                                .with(user(principal)) // 로그인한 사용자로 요청
+                )
+                .andDo(print())
+                .andExpect(status().isBadRequest())   // IllegalArgumentException 400
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.message")
+                        .value("댓글을 찾을 수 없습니다. id=" + invalidCommentId));
+    }
+
+
+
+
+
 
 
 
