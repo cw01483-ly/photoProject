@@ -8,6 +8,7 @@ import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,24 +44,52 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 public class CommentControllerTest {
 
-    @Autowired
-    MockMvc mockMvc;  // 가짜 HTTP 요청/응답을 수행할 핵심 객체
+    private final MockMvc mockMvc; // 가짜 HTTP 요청/응답을 수행할 핵심 객체
+    private final ObjectMapper objectMapper; // 자바 객체를 JSON 문자열로 변환하기 위한 Jackson 객체
+    private final UserRepository userRepository; // 유저 엔티티 저장/조회용 리포지토리
+    private final PostRepository postRepository; // 게시글 엔티티 저장/조회용 리포지토리
+    private final CommentRepository commentRepository; // 댓글 엔티티 저장/조회용 리포지토리
 
+    /*
+        생성자 주입
+        - @Autowired 생성자를 통해 필요한 의존성을 모두 주입받는다.
+        - 필드를 final 로 유지, 생성 시점 이후 의존성이 변경되지 않도록 보장.
+     */
     @Autowired
-    ObjectMapper objectMapper;// 자바 객체를 JSON 문자열로 변환하기 위한 Jackson 객체
+    public CommentControllerTest(
+            MockMvc mockMvc,
+            ObjectMapper objectMapper,
+            UserRepository userRepository,
+            PostRepository postRepository,
+            CommentRepository commentRepository
+    ) {
+        this.mockMvc = mockMvc;
+        this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+    }
+    @BeforeEach
+    void setUp() {
+        /*
+            각 테스트 실행 "직전"에 항상 호출되는 메서드
 
-    @Autowired
-    UserRepository userRepository;
+            - 테스트 간 완벽한 격리를 위해 연관된 테이블 데이터를 모두 삭제한다.
+            - 삭제 순서 중요!
+                1) 댓글(Comment) : 자식 엔티티 (Post, User 를 참조)
+                2) 게시글(Post)   : 부모(Author = User)를 참조하는 자식
+                3) 유저(User)     : 최상위 부모 엔티티
+            - 이렇게 "자식 >> 부모" 순서로 지워야 외래 키 제약 조건 위반을 피할 수 있다.
+         */
+        commentRepository.deleteAll(); // 모든 댓글 삭제
+        postRepository.deleteAll();    // 모든 게시글 삭제
+        userRepository.deleteAll();    // 모든 유저 삭제
+    }
 
-    @Autowired
-    PostRepository postRepository;
-
-    @Autowired
-    CommentRepository commentRepository;
 
     // ⭐ 댓글 생성 성공 테스트
     @Test
-    @DisplayName("댓글 생성 성공 - 로그인 유저가 특정 게시글에 댓글을 달면 201 Created 와 댓글 데이터가 반환된다.")
+    @DisplayName("댓글 생성 성공 : 로그인 유저가 특정 게시글에 댓글을 달면 201 Created 와 댓글 데이터가 반환")
     void createComment_success() throws Exception {
         // [GIVEN]
         // 1) 테스트용 유저 엔티티 생성
@@ -137,7 +166,7 @@ public class CommentControllerTest {
 
     // ⭐ 댓글 생성 실패 테스트 (로그인하지 않은 사용자)
     @Test
-    @DisplayName("댓글 생성 실패 - 로그인하지 않은 사용자는 401 Unauthorized가 발생")
+    @DisplayName("댓글 생성 실패 - 비로그인 사용자는 401 Unauthorized가 발생")
     void createComment_fail_unauthenticated() throws Exception {
         // [GIVEN] 유저, 게시글 생성
         User user = userRepository.save(
@@ -276,7 +305,24 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 존재하지 않는 게시글 ID로 댓글 조회 시 404 NOT FOUND가 반환
+    @Test
+    @DisplayName("댓글 조회 실패 : 없는 게시글, 404 반환")
+    void getCommentsByPost_notFound() throws Exception{
+        // [GIVEN] DB에 존재하지 않는 POST ID 지정
+        Long invalidPostId = 9999999L;
 
+        // [WHEN & THEN]
+        mockMvc.perform(
+                get("/api/posts/{postId}/comments", invalidPostId)// 댓글 조회 요청
+                        .contentType(MediaType.APPLICATION_JSON)
+        )
+                .andDo(print())
+                .andExpect(status().isNotFound()) // 404 NOT FOUND
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.message")
+                        .value("게시글을 찾을 수 없습니다. id=" + invalidPostId));
+    }
 
 
 
@@ -335,43 +381,28 @@ public class CommentControllerTest {
             this.authorities = authorities;   // 권한 목록 초기화
         }
 
-        public Long getId() {
-            return id; // @AuthenticationPrincipal(expression = "id") 에서 참조할 값
-        }
+        public Long getId() { return id; } // @AuthenticationPrincipal(expression = "id") 에서 참조할 값
 
         @Override
-        public Collection<? extends GrantedAuthority> getAuthorities() {
-            return authorities; // 유저의 권한 목록 반환
-        }
+        public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }
+        // 유저의 권한 목록 반환
 
         @Override
-        public String getPassword() {
-            return password; // 비밀번호 반환
-        }
+        public String getPassword() { return password; } // 비밀번호 반환
 
         @Override
-        public String getUsername() {
-            return username; // 아이디 반환
-        }
+        public String getUsername() {  return username;  } // 아이디 반환
 
         @Override
-        public boolean isAccountNonExpired() {
-            return true; // 계정 만료 여부 (테스트에서는 항상 true)
-        }
+        public boolean isAccountNonExpired() { return true; } // 계정 만료 여부 (테스트에서는 항상 true)
 
         @Override
-        public boolean isAccountNonLocked() {
-            return true;  // 계정 잠김 여부 (테스트에서는 항상 true)
-        }
+        public boolean isAccountNonLocked() { return true; } // 계정 잠김 여부 (테스트에서는 항상 true)
 
         @Override
-        public boolean isCredentialsNonExpired() {
-            return true; // 비밀번호 만료 여부 (테스트에서는 항상 true)
-        }
+        public boolean isCredentialsNonExpired() { return true; } // 비밀번호 만료 여부 (테스트에서는 항상 true)
 
         @Override
-        public boolean isEnabled() {
-            return true;  // 계정 활성화 여부 (테스트에서는 항상 true)
-        }
+        public boolean isEnabled() { return true; } // 계정 활성화 여부 (테스트에서는 항상 true)
     }
 }
