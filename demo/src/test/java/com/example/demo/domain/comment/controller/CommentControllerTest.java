@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -578,7 +579,59 @@ public class CommentControllerTest {
 
 
 
+    // ⭐댓글 삭제 성공 테스트
+    @Test
+    @DisplayName("댓글 삭제 성공 : 작성자가 자신의 댓글을 삭제하면 200 OK와 성공 메시지가 반환")
+    void deleteComment_success() throws Exception{
+        // [GIVEN] 유저, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("삭제 전")
+                        .build()
+        );
 
+        // 로그인 유저 principal
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        Long commentId = comment.getId(); // 삭제 대상 댓글ID
+
+        // [WHEN & THEN] 댓글 삭제 API 호출
+        mockMvc.perform(
+                delete("/api/comments/{commentId}", commentId)
+                        .with(user(principal)) // 로그인(작성자 본인) 정보 주입
+        )
+                .andDo(print())
+                .andExpect(status().isOk()) // HTTP 200
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 삭제 성공"));
+
+        // [THEN] DB 검증
+        boolean exists = commentRepository.findById(commentId).isPresent();
+        // @SQLDelete + @Where(is_deleted = false) 로 인해 논리 삭제된 댓글은 조회결과에서 제외
+        assertThat(exists).isFalse(); // 조회되지 않아야 함
+    }
 
 
 
