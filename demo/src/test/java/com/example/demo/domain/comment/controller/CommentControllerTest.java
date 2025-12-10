@@ -174,7 +174,52 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 생성 실패 테스트 (내용 공백)
+    @Test
+    @DisplayName("댓글 생성 실패 : 내용이 공백이면 400 Bad Request 발생")
+    void createComment_fail_blankContent() throws Exception {
+        // [GIVEN] 유저, 게시글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("commentUser1")
+                        .password("Password123!")
+                        .nickname("닉네임1")
+                        .email("blank@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
 
+        //로그인 유저 principal 생성(인증)
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        // 요청 DTO ( 댓글 내용 공백 )
+        CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
+                .content(" ")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN] 유효성 검증 실패 → 400 Bad Request 기대
+        mockMvc.perform(
+                        post("/api/posts/{postId}/comments", post.getId())
+                                .with(user(principal)) // 로그인한 사용자로 요청
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andDo(print())
+                .andExpect(status().isBadRequest()); // DTO 검증 실패 >> 400 응답 기대
+    }
 
 
 
