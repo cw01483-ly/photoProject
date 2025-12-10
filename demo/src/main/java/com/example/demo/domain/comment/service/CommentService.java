@@ -6,6 +6,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -75,7 +76,7 @@ public class CommentService {
 
         // 1) 우선 게시글이 실제로 존재하는지 확인 (없으면 예외)
         postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
+                .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
 
         // 2) CommentRepository 에서 postId 기준으로 댓글 목록 조회
         //    Soft Delete(@Where(is_deleted = false)) 덕분에 삭제된 댓글은 자동으로 제외됨
