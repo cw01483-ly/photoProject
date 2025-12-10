@@ -677,6 +677,70 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 삭제 실패 테스트
+    @Test
+    @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 400 Bad Request가 발생")
+    void deleteComment_fail_notAuthor() throws Exception{
+        // [GIVEN] 유저2, 게시글, 댓글 생성
+        User user1 = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname1")
+                        .email("email1@example.com")
+                        .build()
+        );
+        User user2 = userRepository.save(
+                User.builder()
+                        .username("username2")
+                        .password("Password123!")
+                        .nickname("nickname2")
+                        .email("email2@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user1)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user1)
+                        .content("삭제 전")
+                        .build()
+        );
+        Long commentId = comment.getId(); //삭제 시도할 commentID
+
+        // user2 로 로그인 설정
+        TestUserDetails principal = new TestUserDetails(
+                user2.getId(),
+                user2.getUsername(),
+                user2.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))// 권한 설정
+        );
+
+        // [WHEN & THEN] user2 계정으로 댓글 삭제 요청
+        mockMvc.perform(
+                delete("/api/comments/{commentId}", commentId)
+                        .with(user(principal))
+        )
+                .andDo(print())
+                .andExpect(status().isBadRequest())// IllegalArgumentException  400
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.message")
+                        .value("댓글 작성자만 삭제할 수 있습니다."));
+
+        // [THEN] DB 검증 - 댓글은 여전히 존재해야 함 (삭제되면 안 됨)
+        boolean exists = commentRepository.findById(commentId).isPresent();
+        assertThat(exists).isTrue();
+    }
+
+
+
 
 
 
