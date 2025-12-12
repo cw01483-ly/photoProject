@@ -781,6 +781,74 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 댓글 삭제(Soft Delete) 후 댓글 목록 조회 시 삭제된 댓글은 조회 결과에서 제외
+    @Test
+    @DisplayName("댓글 Soft Delete 검증 : 댓글 삭제 후 게시글 댓글 목록 조회 시 삭제된 댓글이 보이지 않는다")
+    void deleteComment_then_getComments_shouldNotIncludeDeletedComment() throws Exception {
+    // @Transactional, @BeforeEach setup() 주석 처리 후 실행 할 것.
+        // [GIVEN] 유저, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("삭제 전")
+                        .build()
+        );
+
+        // 로그인 principal
+        TestUserDetails principal = new TestUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+        Long postId = post.getId();
+        Long commentId = comment.getId();
+
+        // [WHEN-1] 댓글 삭제 요청 ( Soft Delete )
+        mockMvc.perform(
+                delete("/api/comments/{commentId}", commentId)
+                        .with(user(principal)) // 작성자 본인 삭제
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 삭제 성공"));
+
+        // [WHEN-2] 삭제 후 댓글 목록 조회
+        mockMvc.perform(
+                get("/api/posts/{postId}/comments", postId) // 해당 게시글 속 댓글 조회
+                        .contentType(MediaType.APPLICATION_JSON)
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0)); // 댓글 갯수 0
+
+        // [THEN] DB 검증
+        List<Comment> comments = commentRepository.findByPostId(postId);
+        assertThat(comments).hasSize(0);
+        // findByPostId도 @Where가 적용되므로 삭제된 댓글은 조회되지 않아야 정상
+    }
+
+
 
 
 
