@@ -6,6 +6,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.domain.user.role.UserRole;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -144,6 +145,10 @@ public class CommentService {
         if (comment == null) { // JPQL 단건 조회는 Optional이 아닌 null 일 수 있음
             throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
         }
+        // 요청자 조회 + 관리자 여부 판단
+        User requester = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. id=" + userId));
+        boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인인지 검증 (작성자가 아니면 예외)
         if (!comment.getAuthor().getId().equals(userId)) {
@@ -176,6 +181,10 @@ public class CommentService {
         if (comment == null) {
             throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
         }
+        // 요청자 조회 + 관리자 여부 판단
+        User requester = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. id=" + userId));
+        boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인 검증
         if (!comment.getAuthor().getId().equals(userId)){
