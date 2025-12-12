@@ -45,4 +45,34 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             Pageable에 설정한 정렬 기준으로 ORDER BY 가 적용
     */
     Page<Comment> findByPostId(Long postId, Pageable pageable);
+
+    /*  ⭐ 추가: 댓글 단건 조회 시 작성자(author)를 JOIN FETCH로 같이 조회
+       - 문제 원인:
+           CommentResponseDto.from(comment) 내부에서 comment.getAuthor().getNickname() 호출 시
+           author가 LAZY 프록시 상태인데, 컨트롤러/DTO 변환 시점엔 영속성 컨텍스트(Session)가 닫혀
+           LazyInitializationException 발생
+       - 해결:
+           댓글을 조회할 때부터 author를 "즉시 함께 로딩" 해두면(Join Fetch)
+           DTO 변환 시점에 getAuthor().getNickname()을 안전하게 호출 가능
+       - 사용처(예시):
+           CommentService에서 update/delete 전에
+           commentRepository.findByIdWithAuthor(commentId) 로 조회해서 사용
+   */
+    @Query("SELECT c FROM Comment c JOIN FETCH c.author WHERE c.id = :commentId")
+    Comment findByIdWithAuthor(@Param("commentId") Long commentId);
+    // ⭐ 추가된 메서드 (commentId로 댓글 + 작성자까지 같이 조회)
+
+    /* ⭐ [추가] 게시글 기준 댓글 + 작성자(author)를 함께 조회 (Fetch Join)
+   - LazyInitializationException 방지
+   - CommentResponseDto에서 author.nickname 접근 가능
+*/
+    @Query("""
+    SELECT c
+    FROM Comment c
+    JOIN FETCH c.author
+    WHERE c.post.id = :postId
+    ORDER BY c.id DESC
+""")
+    List<Comment> findByPostIdWithAuthor(@Param("postId") Long postId);
+
 }
