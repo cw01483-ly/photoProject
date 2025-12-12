@@ -26,7 +26,11 @@ import static org.mockito.Mockito.*;
                         -> 결과 값을 보는게 아닌, 과정(행동, side effect)을 검증.
     ⭐ assertThat   : 결과 값을 보여줌
  */
-
+/*
+ CommentService 권한 로직 단위 테스트
+ - ADMIN / USER 권한에 따른 댓글 수정·삭제 검증
+ - Service 계층만 테스트 (Controller/HTTP 제외)
+*/
 public class CommentServiceTest {
     @Mock
     private CommentRepository commentRepository; // CommentService 댓글 저장소를 가짜(Mock)로 대체
@@ -37,6 +41,30 @@ public class CommentServiceTest {
     @InjectMocks
     private CommentService commentService; // 위 Mock 들을 주입받아 실제 CommentService 객체를 생성
 
+    // =============== 테스트 헬퍼 메서드(User엔티티 생성 + id/role 강제 주입) ===============
+    private User createUser(Long id, UserRole role, String username){
+        User user = User.builder()
+                .username(username)
+                .password("password123!")
+                .nickname(username+"_"+id)
+                .email(username + "@example.com")
+                .build();
+        ReflectionTestUtils.setField(user, "id", id);
+        ReflectionTestUtils.setField(user, "role", role);
+        return user;
+    }
+    // =============== 테스트 헬퍼 메서드(Comment 엔티티 생성 + id 강제 주입) ===============
+    private Comment createComment(Long commentId, User author, String content){
+        Comment comment = Comment.builder()
+                .author(author)
+                .content(content)
+                .post(null)
+                .build();
+        ReflectionTestUtils.setField(comment, "id", commentId);
+        return comment;
+    }
+
+
     // ⭐ 권한 로직 단위 테스트: ADMIN 수정 허용
     @Test
     @DisplayName("관리자는 다른 사용자의 댓글도 수정 가능")
@@ -45,34 +73,10 @@ public class CommentServiceTest {
         Long commentId = 1L; // 수정 대상 댓글 ID
         Long authorId = 2L; // 댓글 작성자 ID
         Long adminId = 3L;
-        String newContent = "수정 내용";
 
-        User author = User.builder()
-                .username("author1")
-                .password("password1!")
-                .nickname("nickname")
-                .email("author@example.com")
-                .build();
-        ReflectionTestUtils.setField(author,"id",authorId); // private필드 id 강제 주입
-        ReflectionTestUtils.setField(author, "role", UserRole.USER);
-        // ↑ 이 테스트에서 작성자는 일반 사용자임을 명시
-
-        User admin = User.builder()
-                .username("admin1")
-                .password("password1!")
-                .nickname("adminNickname")
-                .email("admin@example.com")
-                .build();
-        ReflectionTestUtils.setField(admin,"id",adminId);
-        // ↑ admin 이라는 자바 객체의 id 필드에 숫자 adminId를 강제로 대입
-        ReflectionTestUtils.setField(admin,"role", UserRole.ADMIN);
-
-        Comment comment = Comment.builder()
-                .author(author)
-                .content("원본 내용")
-                .post(null) // 수정 권한만 검증하므로 post사용 X
-                .build();
-        ReflectionTestUtils.setField(comment,"id",commentId);
+        User author = createUser(authorId, UserRole.USER, "author");
+        User admin = createUser(adminId, UserRole.ADMIN, "admin");
+        Comment comment = createComment(commentId, author, "원본 내용");
 
         when(commentRepository.findByIdWithAuthor(commentId))
                 .thenReturn(comment); // 서비스가 댓글+작성자를 조회하도록 스텁 설정
@@ -80,69 +84,12 @@ public class CommentServiceTest {
                 .thenReturn(Optional.of(admin)); // 서비스가 userId로 사용자를 조회해 role을 확인하도록 스텁 설정
 
         // [WHEN] ADMIN이 다른 user의 댓글 수정 시도
-        Comment result = commentService.updateComment(commentId, adminId, newContent);
+        Comment result = commentService.updateComment(commentId, adminId, "수정 내용");
 
         // [THEN] DB조회
-        assertThat(result.getContent()).isEqualTo(newContent);
-        verify(commentRepository, times(1)).findByIdWithAuthor(commentId);
-        // ↑ updateComment() 실제로 호출하는건 findByIdWithAuthor
-        verify(userRepository, times(1)).findById(adminId);
-        // ↑ 관리자 여부 판단을 위해 requestor 조회 1번 호출되어야 함을 명시
-    }
-
-
-
-    // ⭐ 관리자 권한 단위 테스트(ADMIN): 작성자 아니어도 삭제 가능
-    @Test
-    @DisplayName("관리자는 다른 사용자의 댓글도 삭제 가능")
-    void deleteComment_admin_success(){
-        // [GIVEN] 작성자가 있는 댓글 + 요청자(ADMIN) 생성, Repository 스텁 구성
-        Long commentId = 1L; // 삭제 대상 commentID
-        Long authorId = 2L; // 댓글 작성자 userId
-        Long adminId = 3L; // 삭제 요청자 adminId
-        // 작성자 생성
-        User author = User.builder()
-                .username("author1")
-                .password("password1!")
-                .nickname("nickname")
-                .email("user@example.com")
-                .build();
-        ReflectionTestUtils.setField(author,"id",authorId);
-        ReflectionTestUtils.setField(author, "role", UserRole.USER);
-
-        // 관리자 생성
-        User admin = User.builder()
-                .username("admin1")
-                .password("password1!")
-                .nickname("adminNickname")
-                .email("admin@example.com")
-                .build();
-        ReflectionTestUtils.setField(admin,"id",adminId);
-        ReflectionTestUtils.setField(admin,"role", UserRole.ADMIN);
-
-        // 댓글 생성
-        Comment comment = Comment.builder()
-                .author(author)
-                .content("원본 내용")
-                .post(null)
-                .build();
-        ReflectionTestUtils.setField(comment,"id",commentId);// 삭제 대상 댓글 id를 테스트에서 수동 주입
-
-        when(commentRepository.findByIdWithAuthor(commentId))
-                .thenReturn(comment); // 서비스는 댓글 조회시 author가 필요 >> findByIdWithAuthor 사용
-        when(userRepository.findById(adminId))
-                .thenReturn(Optional.of(admin)); // 서비스는 요청자 role(ADMIN 여부) 판단을 위해 user 조회
-
-        // [WHEN] ADMIN이 user의 댓글 삭제 시도
-        commentService.deleteComment(commentId, adminId);
-
-        // [THEN] 관리자면 삭제 허용 + delete 호출 발생 + 필요한 조회 메서드 호출 검증
-        // ↓ 댓글(+작성자) 조회 1회
-        verify(commentRepository, times(1)).findByIdWithAuthor(commentId);
-        // ↓ 요청자 조회 1회 (관리자 여부 판단)
-        verify(userRepository, times(1)).findById(adminId);
-        // ↓ 관리자는 작성자가 아니여도 delete 호출
-        verify(commentRepository, times(1)).delete(comment);
+        assertThat(result.getContent()).isEqualTo("수정 내용");
+        verify(commentRepository).findByIdWithAuthor(commentId);
+        verify(userRepository).findById(adminId);
     }
 
 
@@ -155,57 +102,93 @@ public class CommentServiceTest {
         Long commentId = 1L;
         Long authorId = 2L;
         Long otherUserId = 3L; // 수정 요청자 (일반 유저)
-        String originalContent = "원본";
-        String newContent = "수정 시도";
 
-        User author = User.builder()
-                .username("author1")
-                .password("password1!")
-                .nickname("nickname")
-                .email("user1@example.com")
-                .build();
-        ReflectionTestUtils.setField(author,"id",authorId);
-        ReflectionTestUtils.setField(author, "role", UserRole.USER);
+        User author = createUser(authorId, UserRole.USER, "author");
+        User otherUser = createUser(otherUserId, UserRole.USER, "other");
+        Comment comment = createComment(commentId, author, "원본");
 
-        User otherUser = User.builder()
-                .username("otherUser1")
-                .password("password1!")
-                .nickname("otherNickname")
-                .email("user2@example.com")
-                .build();
-        ReflectionTestUtils.setField(otherUser,"id",otherUserId);
-        ReflectionTestUtils.setField(otherUser,"role", UserRole.USER);
-
-        Comment comment = Comment.builder()
-                .author(author)
-                .content(originalContent)
-                .post(null)
-                .build();
-        ReflectionTestUtils.setField(comment,"id",commentId);
 
         when(commentRepository.findByIdWithAuthor(commentId))
                 .thenReturn(comment); // 댓글+작성자 조회 스텁
         when(userRepository.findById(otherUserId))
                 .thenReturn(Optional.of(otherUser)); // 요청자 조회 스텁
 
-        // [WHEN & THEN] 작성자or관리자 아니라면 update 시 예외 발생
+        // [WHEN & THEN] 권한 부족 >> 예외 발생
         assertThatThrownBy(() ->
-                commentService.updateComment(commentId, otherUserId, newContent)
-                /* ↑ updateComment 실행 시
-                    - comment.author.id != otherUserId 이고
-                    - requester.role != ADMIN 이미르 권한 검증 로직 실패해야 함
-                 */
+                commentService.updateComment(commentId, otherUserId, "수정 시도")
         )
                 .isInstanceOf(IllegalArgumentException.class)
-                // ↑ 권한 위반 시 서비스는 IllegalArgumentException 을 던지도록 설계 되어있음.
                 .hasMessage("댓글 작성자만 댓글을 수정할 수 있습니다.");
-                // ↑ 예외 메시지까지 검증
 
-        // [THEN] 댓글 내용 변경되지 않아야함
-        assertThat(comment.getContent()).isEqualTo(originalContent);
+        // [THEN] 내용 변경 없는지 확인
+        assertThat(comment.getContent()).isEqualTo("원본");
+    }
 
-        // [THEN] 조회 발생, save는 호출되지 않음을 검증
-        verify(commentRepository, times(1)).findByIdWithAuthor(commentId);
-        verify(userRepository, times(1)).findById(otherUserId);
+
+
+    // ⭐ 관리자 권한 단위 테스트(ADMIN): 작성자 아니어도 삭제 가능
+    @Test
+    @DisplayName("관리자는 다른 사용자의 댓글도 삭제 가능")
+    void deleteComment_admin_success(){
+        // [GIVEN] 작성자가 있는 댓글 + 요청자(ADMIN) 생성, Repository 스텁 구성
+        Long commentId = 1L; // 삭제 대상 commentID
+        Long authorId = 2L; // 댓글 작성자 userId
+        Long adminId = 3L; // 삭제 요청자 adminId
+
+        User author = createUser(authorId, UserRole.USER, "author");
+        User admin = createUser(adminId, UserRole.ADMIN, "admin");
+        Comment comment = createComment(commentId, author, "원본 내용");
+
+        when(commentRepository.findByIdWithAuthor(commentId))
+                .thenReturn(comment); // 서비스는 댓글 조회시 author가 필요 >> findByIdWithAuthor 사용
+        when(userRepository.findById(adminId))
+                .thenReturn(Optional.of(admin)); // 서비스는 요청자 role(ADMIN 여부) 판단을 위해 user 조회
+
+        // [WHEN] ADMIN이 user의 댓글 삭제 시도
+        commentService.deleteComment(commentId, adminId);
+
+        // [THEN] 관리자면 삭제 허용 + delete 호출 발생 + 필요한 조회 메서드 호출 검증
+        verify(commentRepository).findByIdWithAuthor(commentId);
+        verify(userRepository).findById(adminId);
+        verify(commentRepository).delete(comment); // 권한 검증 통과 시 delete 호출되어야 함
+    }
+
+
+
+
+    // ⭐ 권한 테스트(NOT AUTHOR, NOT ADMIN): 댓글 삭제 실패
+    @Test
+    @DisplayName("작성자도 관리자도 아닌 사용자는 댓글 삭제 불가")
+    void deleteComment_forbidden_notAuthorNotAdmin(){
+        // [GIVEN] 작성자1, 댓글1, 요청자(USER), Repository 스텁 구성
+        Long commentId = 1L;      // 삭제 대상 댓글 ID
+        Long authorId = 2L;       // 댓글 작성자 ID
+        Long otherUserId = 3L;    // 삭제 요청자 ID
+
+       User author = createUser(authorId, UserRole.USER, "author");
+       User otherUser = createUser(otherUserId, UserRole.USER, "other");
+       Comment comment = createComment(commentId, author, "원본 내용");
+
+        when(commentRepository.findByIdWithAuthor(commentId))
+                .thenReturn(comment); // 댓글(+작성자) 조회 스텁
+        when(userRepository.findById(otherUserId))
+                .thenReturn(Optional.of(otherUser)); // 요청자(USER) 조회 스텁
+
+        // [WHEN & THEN] 작성자도 관리자도 아닌 사용자가 삭제 시도하면 예외 발생
+        assertThatThrownBy(() ->
+                        commentService.deleteComment(commentId, otherUserId)
+                /* ↑ deleteComment 실행 시
+                     - comment.author.id != otherUserId 이고
+                     - requester.role != ADMIN 이므로
+                   권한 검증 로직에서 실패*/
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("댓글 작성자만 삭제할 수 있습니다.");
+        // ↑ 삭제 권한 위반 시 의도한 예외 + 메시지가 발생했는지까지 검증
+
+        // [THEN] 조회는 발생하지만, 실제 delete는 절대 호출되면 안 됨
+        verify(commentRepository).findByIdWithAuthor(commentId); // 댓글 조회 발생
+        verify(userRepository).findById(otherUserId);  // 요청자 조회 발생
+        verify(commentRepository, never()).delete(any()); // 권한 실패 시 delete 호출 금지
     }
 }
