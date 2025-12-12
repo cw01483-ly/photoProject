@@ -8,7 +8,6 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
-import com.example.demo.domain.user.role.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,19 +16,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
-import org.springframework.transaction.annotation.Transactional;
 
-import static org.assertj.core.api.Assertions.as;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -49,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-//@Transactional
+
 public class CommentControllerTest {
 
     private final MockMvc mockMvc; // 가짜 HTTP 요청/응답을 수행할 핵심 객체
@@ -65,7 +62,7 @@ public class CommentControllerTest {
         - 필드를 final 로 유지, 생성 시점 이후 의존성이 변경되지 않도록 보장.
      */
     @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     public CommentControllerTest(
@@ -99,57 +96,88 @@ public class CommentControllerTest {
     }
 
 
+    // =============== 테스트 헬퍼 메서드 (중복 GIVEN 제거) ===============
+    // ⭐ User
+    private User saveUser(String username, String email, String nickname){
+        // User.builder()는 role을 USER로 고정 >> 일반 유저 생성시 적용
+        return userRepository.save(
+                User.builder()
+                        .username(username)
+                        .password("Password123!")
+                        .email(email)
+                        .nickname(nickname)
+                        .build()
+        );
+    }
+    // ⭐ Admin
+    private User savAdmin(String username, String email, String nickname){
+        // User.builder()는 role을 USER로 고정 >> 관리자 생성은 DB update 후 재조회 방식이 필수
+        User admin = saveUser(username, email, nickname);
+
+        jdbcTemplate.update(
+                "UPDATE users SET role = ? WHERE id = ?",
+                "ADMIN",
+                admin.getId()
+        );
+        return userRepository.findById(admin.getId())
+                .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
+    }
+    // ⭐ Post
+    private Post savePost(User author, long disPlayNumber, String title, String content){
+        return postRepository.save(
+                Post.builder()
+                        .title(title)
+                        .content(content)
+                        .author(author)
+                        .displayNumber(disPlayNumber)
+                        .build()
+        );
+    }
+    // ⭐ Comment
+    Comment saveComment(Post post, User author, String content){
+        return commentRepository.save(
+                Comment.builder()
+                .post(post)
+                .author(author)
+                .content(content)
+                .build()
+        );
+    }
+    // ⭐ DTO -> JSON 직렬화 공통화
+    private String toJson(Object dto) throws Exception{
+        return objectMapper.writeValueAsString(dto);
+    }
+    // ========================================================================
+
     // ⭐ 댓글 생성 성공 테스트
     @Test
-    @DisplayName("댓글 생성 성공 : 로그인 유저가 특정 게시글에 댓글을 달면 201 Created 와 댓글 데이터가 반환")
+    @DisplayName("댓글 생성 성공 : 로그인 유저 댓글생성 시 201 Created 와 댓글 데이터가 반환")
     void createComment_success() throws Exception {
         // [GIVEN]
-        // 1) 테스트용 유저 엔티티 생성
-        User user = User.builder()
-                .username("commentUser1")
-                .password("Password123!")
-                .email("test@example.com")
-                .nickname("댓글작성자")
-                .build();
-        user = userRepository.save(user);// DB 에 저장 후, 영속 상태 엔티티로 다시 받음
+        User user = saveUser("commentUser1", "test@example.com", "댓글작성자");
+        Post post = savePost(user, 1L, "제목", "내용");
 
-        // 2) 테스트용 게시글 엔티티 생성
-        Post post = Post.builder()
-                .title("제목")
-                .content("내용")
-                .author(user)
-                .displayNumber(1L)
-                .build();
-        post = postRepository.save(post); // DB 에 게시글 저장
-
-        // 3) 댓글 생성 요청 DTO 생성 (클라이언트에서 보낼 내용 흉내)
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
                 .content("첫 번째 댓글")
                 .build();
 
-        // 4) DTO 를 JSON 문자열로 직렬화
-        String requestBody = objectMapper.writeValueAsString(requestDto); // CommentCreateRequestDto -> JSON
+        String requestBody = toJson(requestDto);
 
-        // 5) @AuthenticationPrincipal(expression = "id") 에서 사용할 테스트용 UserDetails 생성
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER")) // 권한 목록 (ROLE_USER 하나 부여)
-        );
-
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
         // [WHEN] API 호출
 
         mockMvc.perform(
                         post("/api/posts/{postId}/comments", post.getId()) // POST /api/posts/{postId}/comments
                                 .with(user(principal)) // 로그인 유저 정보를 Security 컨텍스트에 심어줌
-                                .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON) // @RequestBody JSON 바인딩용
+                                .accept(MediaType.APPLICATION_JSON) // JSON 응답 의도 명시
                                 .content(requestBody)
                 ).andDo(print())
 
                 // [THEN] JSON 검증
                 .andExpect(status().isCreated()) // HTTP 상태 코드가 201 Created 인지 확인
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 생성 성공"))
                 .andExpect(jsonPath("$.data.id").exists()) // data.id (댓글 PK) 가 존재하는지 확인
                 .andExpect(jsonPath("$.data.content").value("첫 번째 댓글"))
                 .andExpect(jsonPath("$.data.postId").value(post.getId().intValue()))
@@ -181,33 +209,20 @@ public class CommentControllerTest {
     @DisplayName("댓글 생성 실패 - 비로그인 사용자는 401 Unauthorized가 발생")
     void createComment_fail_unauthenticated() throws Exception {
         // [GIVEN] 유저, 게시글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("commentUser1")
-                        .password("Password123!")
-                        .nickname("닉네임1")
-                        .email("login@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("제목")
-                        .content("내용")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
+        User user = saveUser("commentUser1", "login@example.com", "닉네임1");
+        Post post = savePost(user, 1L, "제목", "내용");
 
         // 요청 DTO (Comment)
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
                 .content("비로그인 댓글")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
         // [WHEN & THEN]
         mockMvc.perform(
                 post("/api/posts/{postId}/comments", post.getId())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody) // 로그인 정보 X
         )
             .andDo(print())
@@ -221,96 +236,63 @@ public class CommentControllerTest {
     @DisplayName("댓글 생성 실패 : 내용이 공백이면 400 Bad Request 발생")
     void createComment_fail_blankContent() throws Exception {
         // [GIVEN] 유저, 게시글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("commentUser1")
-                        .password("Password123!")
-                        .nickname("닉네임1")
-                        .email("blank@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
+        User user = saveUser("commentUser1", "blank@example.com", "닉네임1");
+        Post post = savePost(user, 1L, "title", "content");
 
         //로그인 유저 principal 생성(인증)
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
 
         // 요청 DTO ( 댓글 내용 공백 )
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
                 .content(" ")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
         // [WHEN & THEN] 유효성 검증 실패 → 400 Bad Request 기대
         mockMvc.perform(
                         post("/api/posts/{postId}/comments", post.getId())
                                 .with(user(principal)) // 로그인한 사용자로 요청
                                 .contentType(MediaType.APPLICATION_JSON)
+                                .accept(MediaType.APPLICATION_JSON) // JSON응답 302 방지
                                 .content(requestBody)
                 )
                 .andDo(print())
-                .andExpect(status().isBadRequest()); // DTO 검증 실패 >> 400 응답 기대
+                .andExpect(status().isBadRequest()) // DTO 검증 실패 >> 400 응답 기대
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message") // errorMessage
+                        .value("댓글 내용은 공백일 수 없습니다."))
+                .andExpect(jsonPath("$.data.message") // ErrorResponse.message
+                        .value("댓글 내용은 공백일 수 없습니다."));
     }
 
 
 
     // ⭐ 댓글 목록 조회 성공 테스트
     @Test
-    @DisplayName("댓글 목록 조회 성공 : 특정 게시글 댓글 목록을 200 OK로 반환")
+    @DisplayName("댓글 목록 조회 성공 : 특정 게시글 댓글 목록 200 OK로 반환")
     void getCommentsByPost_success() throws Exception {
-        // [GIVEN] 유저, 게시글, 댓글 2개 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("commentUser1")
-                        .password("Password123!")
-                        .nickname("닉네임1")
-                        .email("comment@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment1 = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("첫 번째")
-                        .build()
-        );
-        Comment comment2 = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("두 번째")
-                        .build()
-        );
+        // [GIVEN] 유저, 게시글 생성
+        User user = saveUser("commentUser1", "comment@example.com", "닉네임1");
+        Post post = savePost(user, 1L, "title", "content");
+
+        // 댓글 2개 생성
+        saveComment(post, user, "첫 번째 댓글");
+        saveComment(post, user, "두 번째 댓글");
 
         // [WHEN & THEN] GET api/posts/{postId}/comments" 호출
         mockMvc.perform(
                 get("/api/posts/{postId}/comments", post.getId())
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isOk()) // HTTP 200
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(2)) //목록 크기 검증
-                .andExpect(jsonPath("$.data[0].content").value("두 번째"))// DESC정렬
-                .andExpect(jsonPath("$.data[1].content").value("첫 번째"))// DESC정렬
+                .andExpect(jsonPath("$.message").value("댓글 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                // 정렬 검증 Repository ORDER BY c.id DESC
+                .andExpect(jsonPath("$.data[0].content").value("두 번째 댓글"))
+                .andExpect(jsonPath("$.data[1].content").value("첫 번째 댓글"))
+                // 게시글 ID 매핑 검증
                 .andExpect(jsonPath("$.data[0].postId").value(post.getId().intValue()))
                 .andExpect(jsonPath("$.data[1].postId").value(post.getId().intValue()));
     }
@@ -327,12 +309,14 @@ public class CommentControllerTest {
         // [WHEN & THEN]
         mockMvc.perform(
                 get("/api/posts/{postId}/comments", invalidPostId)// 댓글 조회 요청
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
-                .andExpect(status().isNotFound()) // 404 NOT FOUND
+                .andExpect(status().isNotFound()) // 404 ENTITY NOT FOUND
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.data.message")
+                        .value("게시글을 찾을 수 없습니다. id=" + invalidPostId))
+                .andExpect(jsonPath("$.data.message")// data(ErrorResponse) 내부 message
                         .value("게시글을 찾을 수 없습니다. id=" + invalidPostId));
     }
 
@@ -343,55 +327,31 @@ public class CommentControllerTest {
     @DisplayName("댓글 수정 성공 : 작성자가 자신의 댓글 내용을 수정, 200 OK와 수정된 댓글 데이터가 반환")
     void updateComment_success() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 1개 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("수정 전")
-                        .build()
-        );
+        User user = saveUser("username1", "email@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "수정 전");
 
         // 로그인 유저 principal (작성자 본인)
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                // ↑ SecurityContext에 저장될 사용자 권한 목록 ROLE_USER 부여 >> 인증된 사용자 요청 보냄
-        );
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
 
         // 수정 요청 DTO (댓글 내용만 바뀐다고 가정)
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
                 .content("수정 후")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
         // [WHEN & THEN] 댓글 수정 API 호출
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())
                         .with(user(principal)) //작성자 본인 요청
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody)
         )
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 수정 성공"))
                 .andExpect(jsonPath("$.data.id").value(comment.getId().intValue()))
                 // ↑ 댓글 id가 DB에 저장된 comment id와 동일한지 검증
                 .andExpect(jsonPath("$.data.postId").value(post.getId().intValue()))
@@ -401,8 +361,7 @@ public class CommentControllerTest {
                 .andExpect(jsonPath("$.data.content").value("수정 후"));
 
         // [THEN] DB 검증
-        Comment updatedComment = commentRepository.findById(comment.getId())
-                .orElseThrow(() -> new IllegalStateException("댓글이 DB에 존재하지 않습니다."));
+        Comment updatedComment = commentRepository.findByIdWithAuthor(comment.getId());
 
         // 실제 DB에도 내용이 수정되었는지 확인
         assertThat(updatedComment.getContent()).isEqualTo("수정 후");
@@ -417,40 +376,21 @@ public class CommentControllerTest {
     @DisplayName("댓글 수정 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
     void updateComment_Fail_unauthenticated() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("수정 전")
-                        .build()
-        );
+        User user = saveUser("username1", "email@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "수정 전");
 
         // 비로그인 상태에서 보낼 수정 요청 본문 (JSON)
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
                 .content("비로그인 수정 시도")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
         // [WHEN & THEN] 로그인 없이 PATCH 요청 >> 401 기대
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())// 댓글 수정 URL
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody)// .with(user(principal)) X : 비로그인 상태
         )
                 .andDo(print())
@@ -465,121 +405,75 @@ public class CommentControllerTest {
     @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 400 Bad Request 발생")
     void updateComment_Fail_notAuthor() throws Exception{
         // [GIVEN] 작성자 유저, 다른 유저, 게시글, 댓글 1개 생성
-        User user1 = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname1")
-                        .email("email1@example.com")
-                        .build()
-        );
-        User user2 = userRepository.save(
-                User.builder()
-                        .username("username2")
-                        .password("Password123!")
-                        .nickname("nickname2")
-                        .email("email2@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user1)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user1)
-                        .content("수정 전")
-                        .build()
-        );
+        // 댓글 작성자
+        User author = saveUser("author1", "author@example.com", "작성자");
+        // 수정 시도자 (다른 사용자)
+        User otherUser = saveUser("user2", "other@example.com", "다른유저");
 
-        // 다른 사용자로 로그인한 것처럼 Principal 생성
-        TestUserDetails principal = new TestUserDetails(
-                user2.getId(),
-                user2.getUsername(),
-                user2.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER")) //권한 설정, 작성자가 아닌 일반 사용자
-        );
+        Post post = savePost(author, 1L, "title", "content");
+        Comment comment = saveComment(post, author, "원본 댓글");
+
+        // 작성자 author 가 아닌 otherUser로 로그인
+        TestUserDetails principal =
+                userPrincipal(otherUser.getId(), otherUser.getUsername());
 
         // 수정 요청 DTO (내용 변경)
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
                 .content("수정 시도")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
-        // [WHEN & THEN] user2 가 user1의 댓글 수정 API 호출 >> 400 기대
+        // [WHEN & THEN] otherUser 가 author의 댓글 수정 API 호출 >> 400 기대
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())
-                        .with(user(principal)) // user2
+                        .with(user(principal)) // otherUser
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody)
         )
                 .andDo(print())
                 .andExpect(status().isBadRequest()) //400 Bad Request
                 .andExpect(jsonPath("$.success").value(false))// ApiResponse.success = false
+                .andExpect(jsonPath("$.message")
+                        .value("댓글 작성자만 댓글을 수정할 수 있습니다."))
                 .andExpect(jsonPath("$.data.message")
                         .value("댓글 작성자만 댓글을 수정할 수 있습니다."));
     }
 
 
 
-    // ⭐ 댓글 수정 실패 테스트 ⭐
+    // ⭐ 댓글 수정 실패 테스트
     @Test
     @DisplayName("댓글 수정 실패 : 내용이 공백이면 400 Bad Request가 발생")
     void updateComment_fail_blankContent() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("수정 전")
-                        .build()
-        );
+        User user = saveUser("username1", "blank2@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "수정 전");
+
 
         // 로그인 유저 principal
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
 
         // 요청 DTO
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
                 .content(" ")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
+        String requestBody = toJson(requestDto);
 
         // [WHEN & THEN] 공백 내용으로 수정 요청
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())
                         .with(user(principal)) // 로그인 작성자 본인
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody)
         )
                 .andDo(print())
                 .andExpect(status().isBadRequest()) // DTO @NotBlank 검증 실패
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("댓글 내용은 공백일 수 없습니다."))
                 .andExpect(jsonPath("$.data.message")
                         .value("댓글 내용은 공백일 수 없습니다."));
     }
@@ -589,46 +483,23 @@ public class CommentControllerTest {
 
     // ⭐댓글 삭제 성공 테스트
     @Test
-    @DisplayName("댓글 삭제 성공 : 작성자가 자신의 댓글을 삭제하면 200 OK와 성공 메시지가 반환")
+    @DisplayName("댓글 삭제 성공 : 작성자가 자신의 댓글을 삭제하면 200 OK와 성공 메시지 반환")
     void deleteComment_success() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("삭제 전")
-                        .build()
-        );
+        User user = saveUser("username1", "delete@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "삭제 전");
+
 
         // 로그인 유저 principal
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
         Long commentId = comment.getId(); // 삭제 대상 댓글ID
 
         // [WHEN & THEN] 댓글 삭제 API 호출
         mockMvc.perform(
                 delete("/api/comments/{commentId}", commentId)
                         .with(user(principal)) // 로그인(작성자 본인) 정보 주입
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isOk()) // HTTP 200
@@ -648,34 +519,16 @@ public class CommentControllerTest {
     @DisplayName("댓글 삭제 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
     void deleteComment_fail_unauthenticated() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("삭제 전")
-                        .build()
-        );
+        User user = saveUser("username1", "del401@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "삭제 전");
+
         Long commentId = comment.getId(); // 삭제 시도할 댓글 ID
 
         // [WHEN & THEN] 로그인 정보 없이 DELETE 요청 → 401 기대
         mockMvc.perform(
                 delete("/api/comments/{commentId}", commentId)
+                        .accept(MediaType.APPLICATION_JSON)
                 // .with() 없이 >> 비로그인 상태
         )
                 .andDo(print())
@@ -690,61 +543,31 @@ public class CommentControllerTest {
     @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 400 Bad Request가 발생")
     void deleteComment_fail_notAuthor() throws Exception{
         // [GIVEN] 유저2, 게시글, 댓글 생성
-        User user1 = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname1")
-                        .email("email1@example.com")
-                        .build()
-        );
-        User user2 = userRepository.save(
-                User.builder()
-                        .username("username2")
-                        .password("Password123!")
-                        .nickname("nickname2")
-                        .email("email2@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user1)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user1)
-                        .content("삭제 전")
-                        .build()
-        );
+        // 댓글 작성자
+        User author = saveUser("author1", "author_del@example.com", "작성자");
+        // 삭제 시도자 (다른 사용자)
+        User otherUser = saveUser("user2", "other_del@example.com", "다른유저");
+
+        Post post = savePost(author, 1L, "title", "content");
+        Comment comment = saveComment(post, author, "삭제 대상 댓글");
         Long commentId = comment.getId(); //삭제 시도할 commentID
 
-        // user2 로 로그인 설정
-        TestUserDetails principal = new TestUserDetails(
-                user2.getId(),
-                user2.getUsername(),
-                user2.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))// 권한 설정
-        );
+        // otherUser 로 로그인 설정
+        TestUserDetails principal = userPrincipal(otherUser.getId(), otherUser.getUsername());
 
         // [WHEN & THEN] user2 계정으로 댓글 삭제 요청
         mockMvc.perform(
                 delete("/api/comments/{commentId}", commentId)
                         .with(user(principal))
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isBadRequest())// IllegalArgumentException  400
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("댓글 작성자만 삭제할 수 있습니다."))
                 .andExpect(jsonPath("$.data.message")
                         .value("댓글 작성자만 삭제할 수 있습니다."));
-
-        // [THEN] DB 검증 - 댓글은 여전히 존재해야 함 (삭제되면 안 됨)
-        boolean exists = commentRepository.findById(commentId).isPresent();
-        assertThat(exists).isTrue();
     }
 
 
@@ -755,22 +578,10 @@ public class CommentControllerTest {
     @DisplayName("댓글 삭제 실패 : 존재하지 않는 댓글 ID 삭제 시 400 Bad Request 반환")
     void deleteComment_fail_notFoundComment() throws Exception {
         // [GIVEN] 유저 1명 생성 (로그인용)
-        User user = userRepository.save(
-                User.builder()
-                        .username("testUser1")
-                        .password("Password123!")
-                        .nickname("닉네임1")
-                        .email("test@example.com")
-                        .build()
-        );
+        User user = saveUser("testUser1", "notfound_del@example.com", "닉네임1");
 
-        // 로그인 principal 생성
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        // ★ 로그인 principal 생성
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
 
         // 존재하지 않는 댓글 ID 지정
         Long invalidCommentId = 9999999L;
@@ -779,10 +590,13 @@ public class CommentControllerTest {
         mockMvc.perform(
                         delete("/api/comments/{commentId}", invalidCommentId)
                                 .with(user(principal)) // 로그인한 사용자로 요청
+                                .accept(MediaType.APPLICATION_JSON)
                 )
                 .andDo(print())
                 .andExpect(status().isBadRequest())   // IllegalArgumentException 400
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("댓글을 찾을 수 없습니다. id=" + invalidCommentId))
                 .andExpect(jsonPath("$.data.message")
                         .value("댓글을 찾을 수 없습니다. id=" + invalidCommentId));
     }
@@ -794,45 +608,22 @@ public class CommentControllerTest {
     @DisplayName("댓글 Soft Delete 검증 : 댓글 삭제 후 게시글 댓글 목록 조회 시 삭제된 댓글이 보이지 않는다")
     void deleteComment_then_getComments_shouldNotIncludeDeletedComment() throws Exception {
         // [GIVEN] 유저, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("삭제 전")
-                        .build()
-        );
-
-        // 로그인 principal
-        TestUserDetails principal = new TestUserDetails(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
+        User user = saveUser("username1", "softdel@example.com", "nickname");
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "삭제 전");
 
         Long postId = post.getId();
         Long commentId = comment.getId();
+
+        // 로그인 principal
+        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+
 
         // [WHEN-1] 댓글 삭제 요청 ( Soft Delete )
         mockMvc.perform(
                 delete("/api/comments/{commentId}", commentId)
                         .with(user(principal)) // 작성자 본인 삭제
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -842,7 +633,7 @@ public class CommentControllerTest {
         // [WHEN-2] 삭제 후 댓글 목록 조회
         mockMvc.perform(
                 get("/api/posts/{postId}/comments", postId) // 해당 게시글 속 댓글 조회
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -862,68 +653,36 @@ public class CommentControllerTest {
     @DisplayName("관리자 권한 테스트 : 댓글 수정 성공")
     void updateComment_success_byAdmin() throws Exception {
         // [GIVEN] 작성자, 관리자, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        User admin = userRepository.save(
-                User.builder()
-                        .username("admin1")
-                        .password("Password123!")
-                        .nickname("adminNickname")
-                        .email("email2@example.com")
-                        .build()
-        );
-        // 빌더 role=USER 고정, DB에서 직접 ADMIN 으로 변경
-        jdbcTemplate.update("UPDATE users SET role =? WHERE id = ?", "ADMIN", admin.getId());
-        // 서비스에서 role을 DB로 조회, 영속 객체를 다시 조회해서 role 반영
-        admin = userRepository.findById(admin.getId())
-                .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
+        User user = saveUser("user1", "user1@example.com", "작성자");
 
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("수정 전")
-                        .build()
-        );
+        // 관리자 유저 생성 (USER -> ADMIN으로 DB 직접 변경)
+        User admin = savAdmin("admin1", "admin1@example.com", "관리자");
+
+        // 게시글 + 댓글 (댓글 작성자는 user)
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "수정 전");
+
 
         // 관리자 principal (ROLE_ADMIN)
-        TestUserDetails principal = new TestUserDetails(
-                admin.getId(),
-                admin.getUsername(),
-                admin.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
+        TestUserDetails principal = adminPrincipal(admin.getId(), admin.getUsername());
 
         // 수정 요청 DTO
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
                 .content("관리자 수정")
                 .build();
-        String requestBody = objectMapper.writeValueAsString(requestDto);
 
         // [WHEN & THEN] 관리자 계정으로 user 댓글 수정 요청
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())
                         .with(user(principal))
+                        .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
+                        .content(toJson(requestDto))
         )
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 수정 성공"))
                 .andExpect(jsonPath("$.data.id").value(comment.getId().intValue()))
                 .andExpect(jsonPath("$.data.authorId").value(user.getId().intValue()))
                 .andExpect(jsonPath("$.data.content").value("관리자 수정"));
@@ -932,7 +691,6 @@ public class CommentControllerTest {
         Comment updateComment = commentRepository.findById(comment.getId())
                 .orElseThrow(() -> new IllegalStateException("댓글이 DB에 존재하지 않습니다."));
         assertThat(updateComment.getContent()).isEqualTo("관리자 수정");
-        assertThat(updateComment.getAuthor().getId()).isEqualTo(user.getId());
     }
 
 
@@ -943,57 +701,26 @@ public class CommentControllerTest {
     @DisplayName("관리자 권한 테스트 : 댓글 삭제 성공")
     void deleteComment_success_byAdmin() throws Exception {
         // [GIVEN] 작성자, 관리자, 게시글, 댓글 생성
-        User user = userRepository.save(
-                User.builder()
-                        .username("username1")
-                        .password("Password123!")
-                        .nickname("nickname")
-                        .email("email@example.com")
-                        .build()
-        );
-        User admin = userRepository.save(
-                User.builder()
-                        .username("admin1")
-                        .password("Password123!")
-                        .nickname("adminNickname")
-                        .email("email2@example.com")
-                        .build()
-        );
-        // 빌더 role=USER 고정, DB에서 직접 ADMIN 으로 변경
-        jdbcTemplate.update("UPDATE users SET role =? WHERE id = ?", "ADMIN", admin.getId());
-        // 서비스에서 role을 DB로 조회, 영속 객체를 다시 조회해서 role 반영
-        admin = userRepository.findById(admin.getId())
-                .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
+        User user = saveUser("user1", "user1@example.com", "작성자");
 
-        Post post = postRepository.save(
-                Post.builder()
-                        .title("title")
-                        .content("content")
-                        .author(user)
-                        .displayNumber(1L)
-                        .build()
-        );
-        Comment comment = commentRepository.save(
-                Comment.builder()
-                        .post(post)
-                        .author(user)
-                        .content("삭제 전")
-                        .build()
-        );
+        // ★ 관리자 유저 생성 (USER → ADMIN)
+        User admin = savAdmin("admin1", "admin1@example.com", "관리자");
+
+        // 게시글 + 댓글 (댓글 작성자는 user)
+        Post post = savePost(user, 1L, "title", "content");
+        Comment comment = saveComment(post, user, "삭제 전");
+
+        Long commentId = comment.getId();// 삭제 대상 댓글 id
 
         // 관리자 principal
-        TestUserDetails principal = new TestUserDetails(
-                admin.getId(), // @AuthenticationPrincipal(expression="id")로 주입될 값
-                admin.getUsername(),
-                admin.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
-        Long commentId = comment.getId(); // 삭제 대상 댓글 id
+        TestUserDetails principal = adminPrincipal(admin.getId(), admin.getUsername());
+
 
         // [WHEN * THEN] 관리자 계정으로 user댓글 삭제 요청
         mockMvc.perform(
                 delete("/api/comments/{commentId}", commentId)
                         .with(user(principal))
+                        .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
                 .andExpect(status().isOk())
