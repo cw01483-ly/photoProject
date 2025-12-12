@@ -909,4 +909,24 @@ public class CommentControllerTest {
         @Override
         public boolean isEnabled() { return true; } // 계정 활성화 여부 (테스트에서는 항상 true)
     }
+
+    //  관리자 Principal 생성 헬퍼
+    private TestUserDetails adminPrincipal(Long id, String username) {
+        return new TestUserDetails(
+                id,
+                username,
+                "Password123!",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+    }
+
+    //  일반 USER Principal 생성 헬퍼
+    private TestUserDetails userPrincipal(Long id, String username) {
+        return new TestUserDetails(
+                id,
+                username,
+                "Password123!",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+    }
 }
