@@ -151,7 +151,7 @@ public class CommentService {
         boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인인지 검증 (작성자가 아니면 예외)
-        if (!comment.getAuthor().getId().equals(userId)) {
+        if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
             // 작성자가 아닌 사용자가 수정 시도할 경우 예외 발생
             throw new IllegalArgumentException("댓글 작성자만 댓글을 수정할 수 있습니다.");
         }
@@ -187,7 +187,7 @@ public class CommentService {
         boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인 검증
-        if (!comment.getAuthor().getId().equals(userId)){
+        if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
             throw new IllegalArgumentException("댓글 작성자만 삭제할 수 있습니다.");
         }
         /* 3) 레포지토리의 delete 메서드 호출
