@@ -80,7 +80,7 @@ public class CommentService {
 
         // 2) CommentRepository 에서 postId 기준으로 댓글 목록 조회
         //    Soft Delete(@Where(is_deleted = false)) 덕분에 삭제된 댓글은 자동으로 제외됨
-        return commentRepository.findByPostId(postId);
+        return commentRepository.findByPostIdWithAuthor(postId);
     }
 
     public Page<Comment> getCommentsByPostWithPaging(Long postId, int page, int size) {
@@ -140,8 +140,10 @@ public class CommentService {
     public Comment updateComment(Long commentId, Long userId, String newContent) {
 
         // 1) 수정할 댓글 조회
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
+        Comment comment = commentRepository.findByIdWithAuthor(commentId);
+        if (comment == null) { // JPQL 단건 조회는 Optional이 아닌 null 일 수 있음
+            throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
+        }
 
         // 2) 작성자 본인인지 검증 (작성자가 아니면 예외)
         if (!comment.getAuthor().getId().equals(userId)) {
@@ -170,8 +172,10 @@ public class CommentService {
     public void deleteComment(Long commentId, Long userId) {
 
         // 1) 삭제할 댓글을 조회 (없으면 예외)
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
+        Comment comment = commentRepository.findByIdWithAuthor(commentId);
+        if (comment == null) {
+            throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
+        }
 
         // 2) 작성자 본인 검증
         if (!comment.getAuthor().getId().equals(userId)){
