@@ -8,6 +8,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.domain.user.role.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,11 +22,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
 import org.springframework.transaction.annotation.Transactional;
+
+import static org.assertj.core.api.Assertions.as;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -334,7 +338,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 성공 테스트 (작성자 본인 댓글 내용을 수정) ⭐
+    // ⭐ 댓글 수정 성공 테스트 (작성자 본인 댓글 내용을 수정)
     @Test
     @DisplayName("댓글 수정 성공 : 작성자가 자신의 댓글 내용을 수정, 200 OK와 수정된 댓글 데이터가 반환")
     void updateComment_success() throws Exception{
@@ -408,7 +412,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 실패 테스트 ⭐
+    // ⭐ 댓글 수정 실패 테스트
     @Test
     @DisplayName("댓글 수정 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
     void updateComment_Fail_unauthenticated() throws Exception{
@@ -456,7 +460,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 실패 테스트 ⭐
+    // ⭐ 댓글 수정 실패 테스트
     @Test
     @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 400 Bad Request 발생")
     void updateComment_Fail_notAuthor() throws Exception{
@@ -681,7 +685,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 삭제 실패 테스트 ⭐
+    // ⭐ 댓글 삭제 실패 테스트
     @Test
     @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 400 Bad Request가 발생")
     void deleteComment_fail_notAuthor() throws Exception{
@@ -851,6 +855,85 @@ public class CommentControllerTest {
         // findByPostId도 @Where가 적용되므로 삭제된 댓글은 조회되지 않아야 정상
     }
 
+
+
+    // ⭐ 관리자 권한 테스트
+    @Test
+    @DisplayName("관리자 권한 테스트 : 댓글 수정 성공")
+    void updateComment_success_byAdmin() throws Exception {
+        // [GIVEN] 작성자, 관리자, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        User admin = userRepository.save(
+                User.builder()
+                        .username("admin1")
+                        .password("Password123!")
+                        .nickname("adminNickname")
+                        .email("email2@example.com")
+                        .build()
+        );
+        // 빌더 role=USER 고정, DB에서 직접 ADMIN 으로 변경
+        jdbcTemplate.update("UPDATE users SET role =? WHERE id = ?", "ADMIN", admin.getId());
+        // 서비스에서 role을 DB로 조회, 영속 객체를 다시 조회해서 role 반영
+        admin = userRepository.findById(admin.getId())
+                .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
+
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("수정 전")
+                        .build()
+        );
+
+        // 관리자 principal (ROLE_ADMIN)
+        TestUserDetails principal = new TestUserDetails(
+                admin.getId(),
+                admin.getUsername(),
+                admin.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+
+        // 수정 요청 DTO
+        CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
+                .content("관리자 수정")
+                .build();
+        String requestBody = objectMapper.writeValueAsString(requestDto);
+
+        // [WHEN & THEN] 관리자 계정으로 user 댓글 수정 요청
+        mockMvc.perform(
+                patch("/api/comments/{commentId}", comment.getId())
+                        .with(user(principal))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody)
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(comment.getId().intValue()))
+                .andExpect(jsonPath("$.data.authorId").value(user.getId().intValue()))
+                .andExpect(jsonPath("$.data.content").value("관리자 수정"));
+
+        // [THEN] DB 검증
+        Comment updateComment = commentRepository.findById(comment.getId())
+                .orElseThrow(() -> new IllegalStateException("댓글이 DB에 존재하지 않습니다."));
+        assertThat(updateComment.getContent()).isEqualTo("관리자 수정");
+        assertThat(updateComment.getAuthor().getId()).isEqualTo(user.getId());
+    }
 
 
 
