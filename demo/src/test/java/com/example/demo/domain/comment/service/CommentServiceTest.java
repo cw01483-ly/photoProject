@@ -20,6 +20,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 // Mockito 기반 단위 테스트 실행 (스프링 컨테이너 없이 @Mock/@InjectMocks 동작)
+/*
+    ⭐ verify       : Mockito의 기능 중 하나, 메서드가 실제로 호출 되었는지 검증
+                        -> 결과 값을 보는게 아닌, 과정(행동, side effect)을 검증.
+    ⭐ assertThat   : 결과 값을 보여줌
+ */
 
 public class CommentServiceTest {
     @Mock
@@ -82,6 +87,60 @@ public class CommentServiceTest {
         // ↑ updateComment() 실제로 호출하는건 findByIdWithAuthor
         verify(userRepository, times(1)).findById(adminId);
         // ↑ 관리자 여부 판단을 위해 requestor 조회 1번 호출되어야 함을 명시
+    }
 
+
+
+    // ⭐ 관리자 권한 단위 테스트(ADMIN): 작성자 아니어도 삭제 가능
+    @Test
+    @DisplayName("관리자는 다른 사용자의 댓글도 삭제 가능")
+    void deleteComment_admin_success(){
+        // [GIVEN] 작성자가 있는 댓글 + 요청자(ADMIN) 생성, Repository 스텁 구성
+        Long commentId = 1L; // 삭제 대상 commentID
+        Long authorId = 2L; // 댓글 작성자 userId
+        Long adminId = 3L; // 삭제 요청자 adminId
+        // 작성자 생성
+        User author = User.builder()
+                .username("author1")
+                .password("password1!")
+                .nickname("nickname")
+                .email("user@example.com")
+                .build();
+        ReflectionTestUtils.setField(author,"id",authorId);
+        ReflectionTestUtils.setField(author, "role", UserRole.USER);
+
+        // 관리자 생성
+        User admin = User.builder()
+                .username("admin1")
+                .password("password1!")
+                .nickname("adminNickname")
+                .email("admin@example.com")
+                .build();
+        ReflectionTestUtils.setField(admin,"id",adminId);
+        ReflectionTestUtils.setField(admin,"role", UserRole.ADMIN);
+
+        // 댓글 생성
+        Comment comment = Comment.builder()
+                .author(author)
+                .content("원본 내용")
+                .post(null)
+                .build();
+        ReflectionTestUtils.setField(comment,"id",commentId);// 삭제 대상 댓글 id를 테스트에서 수동 주입
+
+        when(commentRepository.findByIdWithAuthor(commentId))
+                .thenReturn(comment); // 서비스는 댓글 조회시 author가 필요 >> findByIdWithAuthor 사용
+        when(userRepository.findById(adminId))
+                .thenReturn(Optional.of(admin)); // 서비스는 요청자 role(ADMIN 여부) 판단을 위해 user 조회
+
+        // [WHEN] ADMIN이 user의 댓글 삭제 시도
+        commentService.deleteComment(commentId, adminId);
+
+        // [THEN] 관리자면 삭제 허용 + delete 호출 발생 + 필요한 조회 메서드 호출 검증
+        // ↓ 댓글(+작성자) 조회 1회
+        verify(commentRepository, times(1)).findByIdWithAuthor(commentId);
+        // ↓ 요청자 조회 1회 (관리자 여부 판단)
+        verify(userRepository, times(1)).findById(adminId);
+        // ↓ 관리자는 작성자가 아니여도 delete 호출
+        verify(commentRepository, times(1)).delete(comment);
     }
 }
