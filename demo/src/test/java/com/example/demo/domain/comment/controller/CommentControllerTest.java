@@ -938,6 +938,77 @@ public class CommentControllerTest {
 
 
 
+    // ⭐ 관리자 권한 테스트
+    @Test
+    @DisplayName("관리자 권한 테스트 : 댓글 삭제 성공")
+    void deleteComment_success_byAdmin() throws Exception {
+        // [GIVEN] 작성자, 관리자, 게시글, 댓글 생성
+        User user = userRepository.save(
+                User.builder()
+                        .username("username1")
+                        .password("Password123!")
+                        .nickname("nickname")
+                        .email("email@example.com")
+                        .build()
+        );
+        User admin = userRepository.save(
+                User.builder()
+                        .username("admin1")
+                        .password("Password123!")
+                        .nickname("adminNickname")
+                        .email("email2@example.com")
+                        .build()
+        );
+        // 빌더 role=USER 고정, DB에서 직접 ADMIN 으로 변경
+        jdbcTemplate.update("UPDATE users SET role =? WHERE id = ?", "ADMIN", admin.getId());
+        // 서비스에서 role을 DB로 조회, 영속 객체를 다시 조회해서 role 반영
+        admin = userRepository.findById(admin.getId())
+                .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
+
+        Post post = postRepository.save(
+                Post.builder()
+                        .title("title")
+                        .content("content")
+                        .author(user)
+                        .displayNumber(1L)
+                        .build()
+        );
+        Comment comment = commentRepository.save(
+                Comment.builder()
+                        .post(post)
+                        .author(user)
+                        .content("삭제 전")
+                        .build()
+        );
+
+        // 관리자 principal
+        TestUserDetails principal = new TestUserDetails(
+                admin.getId(), // @AuthenticationPrincipal(expression="id")로 주입될 값
+                admin.getUsername(),
+                admin.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        Long commentId = comment.getId(); // 삭제 대상 댓글 id
+
+        // [WHEN * THEN] 관리자 계정으로 user댓글 삭제 요청
+        mockMvc.perform(
+                delete("/api/comments/{commentId}", commentId)
+                        .with(user(principal))
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("댓글 삭제 성공"));
+
+        // [THEN] DB 검증
+        boolean exists = commentRepository.findById(commentId).isPresent();
+        assertThat(exists).isFalse();
+    }
+
+
+
+
+
 
 
 
