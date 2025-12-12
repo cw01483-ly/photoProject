@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -142,5 +143,69 @@ public class CommentServiceTest {
         verify(userRepository, times(1)).findById(adminId);
         // ↓ 관리자는 작성자가 아니여도 delete 호출
         verify(commentRepository, times(1)).delete(comment);
+    }
+
+
+
+    // ⭐ 권한 테스트(NOT AUTHOR, NOT ADMIN): 댓글 수정 실패
+    @Test
+    @DisplayName("작성자도 관리자도 아닌 사용자는 댓글 수정 불가")
+    void updateComment_forbidden_notAuthorNotAdmin(){
+        // [GIVEN] 작성자1, 댓글, 요청자1(USER), Repository 스텁 구성
+        Long commentId = 1L;
+        Long authorId = 2L;
+        Long otherUserId = 3L; // 수정 요청자 (일반 유저)
+        String originalContent = "원본";
+        String newContent = "수정 시도";
+
+        User author = User.builder()
+                .username("author1")
+                .password("password1!")
+                .nickname("nickname")
+                .email("user1@example.com")
+                .build();
+        ReflectionTestUtils.setField(author,"id",authorId);
+        ReflectionTestUtils.setField(author, "role", UserRole.USER);
+
+        User otherUser = User.builder()
+                .username("otherUser1")
+                .password("password1!")
+                .nickname("otherNickname")
+                .email("user2@example.com")
+                .build();
+        ReflectionTestUtils.setField(otherUser,"id",otherUserId);
+        ReflectionTestUtils.setField(otherUser,"role", UserRole.USER);
+
+        Comment comment = Comment.builder()
+                .author(author)
+                .content(originalContent)
+                .post(null)
+                .build();
+        ReflectionTestUtils.setField(comment,"id",commentId);
+
+        when(commentRepository.findByIdWithAuthor(commentId))
+                .thenReturn(comment); // 댓글+작성자 조회 스텁
+        when(userRepository.findById(otherUserId))
+                .thenReturn(Optional.of(otherUser)); // 요청자 조회 스텁
+
+        // [WHEN & THEN] 작성자or관리자 아니라면 update 시 예외 발생
+        assertThatThrownBy(() ->
+                commentService.updateComment(commentId, otherUserId, newContent)
+                /* ↑ updateComment 실행 시
+                    - comment.author.id != otherUserId 이고
+                    - requester.role != ADMIN 이미르 권한 검증 로직 실패해야 함
+                 */
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                // ↑ 권한 위반 시 서비스는 IllegalArgumentException 을 던지도록 설계 되어있음.
+                .hasMessage("댓글 작성자만 댓글을 수정할 수 있습니다.");
+                // ↑ 예외 메시지까지 검증
+
+        // [THEN] 댓글 내용 변경되지 않아야함
+        assertThat(comment.getContent()).isEqualTo(originalContent);
+
+        // [THEN] 조회 발생, save는 호출되지 않음을 검증
+        verify(commentRepository, times(1)).findByIdWithAuthor(commentId);
+        verify(userRepository, times(1)).findById(otherUserId);
     }
 }
