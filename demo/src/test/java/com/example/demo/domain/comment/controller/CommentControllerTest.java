@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
+//@Transactional
 public class CommentControllerTest {
 
     private final MockMvc mockMvc; // 가짜 HTTP 요청/응답을 수행할 핵심 객체
@@ -54,11 +54,15 @@ public class CommentControllerTest {
     private final PostRepository postRepository; // 게시글 엔티티 저장/조회용 리포지토리
     private final CommentRepository commentRepository; // 댓글 엔티티 저장/조회용 리포지토리
 
+
     /*
         생성자 주입
         - @Autowired 생성자를 통해 필요한 의존성을 모두 주입받는다.
         - 필드를 final 로 유지, 생성 시점 이후 의존성이 변경되지 않도록 보장.
      */
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @Autowired
     public CommentControllerTest(
             MockMvc mockMvc,
@@ -85,9 +89,9 @@ public class CommentControllerTest {
                 3) 유저(User)     : 최상위 부모 엔티티
             - 이렇게 "자식 >> 부모" 순서로 지워야 외래 키 제약 조건 위반을 피할 수 있다.
          */
-        commentRepository.deleteAll(); // 모든 댓글 삭제
-        postRepository.deleteAll();    // 모든 게시글 삭제
-        userRepository.deleteAll();    // 모든 유저 삭제
+        jdbcTemplate.execute("DELETE FROM comments");
+        jdbcTemplate.execute("DELETE FROM posts");
+        jdbcTemplate.execute("DELETE FROM users");
     }
 
 
@@ -330,7 +334,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 성공 테스트 (작성자 본인 댓글 내용을 수정)
+    // ⭐ 댓글 수정 성공 테스트 (작성자 본인 댓글 내용을 수정) ⭐
     @Test
     @DisplayName("댓글 수정 성공 : 작성자가 자신의 댓글 내용을 수정, 200 OK와 수정된 댓글 데이터가 반환")
     void updateComment_success() throws Exception{
@@ -404,7 +408,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 실패 테스트
+    // ⭐ 댓글 수정 실패 테스트 ⭐
     @Test
     @DisplayName("댓글 수정 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
     void updateComment_Fail_unauthenticated() throws Exception{
@@ -452,7 +456,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 실패 테스트
+    // ⭐ 댓글 수정 실패 테스트 ⭐
     @Test
     @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 400 Bad Request 발생")
     void updateComment_Fail_notAuthor() throws Exception{
@@ -519,7 +523,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 수정 실패 테스트
+    // ⭐ 댓글 수정 실패 테스트 ⭐
     @Test
     @DisplayName("댓글 수정 실패 : 내용이 공백이면 400 Bad Request가 발생")
     void updateComment_fail_blankContent() throws Exception{
@@ -677,7 +681,7 @@ public class CommentControllerTest {
 
 
 
-    // ⭐ 댓글 삭제 실패 테스트
+    // ⭐ 댓글 삭제 실패 테스트 ⭐
     @Test
     @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 400 Bad Request가 발생")
     void deleteComment_fail_notAuthor() throws Exception{
@@ -785,7 +789,6 @@ public class CommentControllerTest {
     @Test
     @DisplayName("댓글 Soft Delete 검증 : 댓글 삭제 후 게시글 댓글 목록 조회 시 삭제된 댓글이 보이지 않는다")
     void deleteComment_then_getComments_shouldNotIncludeDeletedComment() throws Exception {
-    // @Transactional, @BeforeEach setup() 주석 처리 후 실행 할 것.
         // [GIVEN] 유저, 게시글, 댓글 생성
         User user = userRepository.save(
                 User.builder()
