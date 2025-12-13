@@ -27,7 +27,11 @@ import static org.springframework.security.config.Customizer.withDefaults; // �
 @RequiredArgsConstructor // final 필드 생성자 주입
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter; // JWT 인증 필터 (쿠키에서 토큰 꺼내서 인증 처리)
+// @Component 제거했으니, 여기서 직접 Bean으로 만들어 주입/사용
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
 
     /*
         SecurityFilterChain을 2개로 분리
@@ -73,9 +77,8 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 
-        /* ★ JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 배치
-                >> /api/** 요청에서 쿠키 JWT를 먼저 읽어서 SecurityContext에 인증 올리기*/
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        // /api/** 체인에만 JWT 필터를 붙임
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
