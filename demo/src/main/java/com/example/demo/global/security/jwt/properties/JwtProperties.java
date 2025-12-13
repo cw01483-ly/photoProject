@@ -1,4 +1,4 @@
-package com.example.demo.global.security.jwt;
+package com.example.demo.global.security.jwt.properties;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -1,9 +1,8 @@
-package com.example.demo.global.config;
+package com.example.demo.global.security;
 
 /* 스프링 시큐리티 전역 보안 설정 클래스*/
 
-import com.example.demo.global.security.CustomUserDetailsService;
-import com.example.demo.global.security.jwt.JwtAuthenticationFilter;
+import com.example.demo.global.security.jwt.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
