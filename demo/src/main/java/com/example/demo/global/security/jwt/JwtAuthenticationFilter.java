@@ -23,6 +23,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException{
+
+        System.out.println("[JWT FILTER] request uri = " + request.getRequestURI());
+
         // 쿠키에서 JWT 꺼내어 SecurityContext 인증 올릴 예정
         filterChain.doFilter(request,response);
     }
