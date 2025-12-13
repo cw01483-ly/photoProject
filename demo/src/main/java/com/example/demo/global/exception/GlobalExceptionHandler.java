@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 
 
@@ -219,6 +221,67 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.fail(body, "해당 요청에 대한 권한이 없습니다."));
     }
+
+
+
+    /* 6) 정적 리소스 없음(NoResourceFoundException) 예외 처리 -> 404로 응답
+        - 존재하지 않는 URL(/posts 등) 요청 시
+        - static 리소스도 없으면 NoResourceFoundException 발생
+        - 이건 서버 내부 오류(500)가 아니라 "리소스 없음(404)"이므로 404로 내려야 정상
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleNoResourceFoundException(
+            NoResourceFoundException ex,
+            HttpServletRequest request
+    ) {
+        // 6-1) 404는 경고 로그로 남기기
+        log.warn("리소스 없음 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        // 6-2) 404 응답 바디 구성
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)
+                .status(HttpStatus.NOT_FOUND.value())
+                .message("요청하신 리소스를 찾을 수 없습니다.")
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        // 6-3) 404 상태코드 + 공통 포맷(ApiResponse.fail) 유지
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail(body, "요청하신 리소스를 찾을 수 없습니다."));
+    }
+
+
+
+    /* 7) 컨트롤러 매핑 자체가 없는 경우(NoHandlerFoundException) -> 404로 응답
+            - 설정에 따라 발생하지 않을 수도 있지만(기본은 404를 그냥 내려줌),
+            GlobalExceptionHandler가 500으로 말아버리는 상황을 방지하기 위해 대비용으로 추가
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleNoHandlerFoundException(
+            NoHandlerFoundException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("핸들러 없음 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)
+                .status(HttpStatus.NOT_FOUND.value())
+                .message("요청하신 API를 찾을 수 없습니다.")
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail(body, "요청하신 API를 찾을 수 없습니다."));
+    }
+
 
     // 공통 에러 응답 포맷 클래스 -> 이 클래스를 JSON으로 변환 후 클라이언트에게 송출
     @Getter
