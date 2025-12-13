@@ -65,7 +65,7 @@ public class SecurityConfig {
                         // 댓글 수정 : 초소한 로그인 필수, PATCH /api/comments/{commentId}
                         .requestMatchers(HttpMethod.PATCH, "/api/comments/*").authenticated()
                         // 댓글 삭제 : 최소한 로그인 필수, DELETE /api/comments/{commentId}
-                        .requestMatchers(HttpMethod.DELETE, "DELETE /api/comments/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
                         // 그 외 /api/** 쓰기 작업은 인증 필요
                         .anyRequest().authenticated()
                 )
