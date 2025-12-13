@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 // -> 스프링이 PostService, PostLikeService 를 자동 주입해 줄 수 있음
 
 @RequestMapping("/api/posts")
-// 이 컨트롤러의 기본 URL 경로를 "/posts"로 설정
+// 이 컨트롤러의 기본 URL 경로를 "/api/posts"로 설정
 // 예) GET /posts, POST /posts, GET /posts/{id} 등
 
 public class PostController {

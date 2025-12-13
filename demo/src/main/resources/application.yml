@@ -35,3 +35,8 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
+
+jwt:
+  secret: "L5d!@t7XyZ#pQkR$uVwBnMeAcFgHjKmNq2s4v6y8z0A1B2C3D4E5F6G7H8I9J0K"
+  access-token-exp-minutes: 30
+  cookie-name: "ACCESS_TOKEN"
