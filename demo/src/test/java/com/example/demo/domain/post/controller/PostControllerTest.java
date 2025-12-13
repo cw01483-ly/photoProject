@@ -4,6 +4,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository; // 게시글 DB 검증용
 import com.example.demo.domain.user.entity.User;              // 작성자 엔티티
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.support.BaseIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,11 +31,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     - 서비스 로직(PostService) 자체는 별도 단위 테스트로 검증할 수 있지만,
       여기서는 "웹 레이어(컨트롤러 + JSON/파라미터 매핑 + 예외 핸들링)"을 집중적으로 확인
  */
-@SpringBootTest  // 스프링 부트 전체 컨텍스트 로드 (실제 앱과 거의 동일 환경)
+/*@SpringBootTest  // 스프링 부트 전체 컨텍스트 로드 (실제 앱과 거의 동일 환경)
 @AutoConfigureMockMvc// MockMvc 자동 설정 (HTTP 요청/응답을 테스트 코드에서 시뮬레이션)
-@Transactional // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지
-
-public class PostControllerTest {
+@Transactional // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지*/
+@ActiveProfiles("test")
+public class PostControllerTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

@@ -54,6 +54,17 @@ public class SecurityConfig {
                         (sm -> sm.sessionCreationPolicy
                                 (SessionCreationPolicy.STATELESS))
 
+                .exceptionHandling(ex ->ex
+                        // 비로그인 -> 404
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                        })
+                        // 권한 부족 → 403
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                        })
+                )
+
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
                         // 회원가입, 로그인 은 비 로그인 허용

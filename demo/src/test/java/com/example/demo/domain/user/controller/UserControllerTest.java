@@ -3,6 +3,7 @@ package com.example.demo.domain.user.controller;
 import com.example.demo.domain.user.dto.UserLoginRequestDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.support.BaseIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,10 +43,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     - 서비스 로직 자체는 UserServiceTest에서 검증했고,
       여기서는 "웹 레이어(컨트롤러 + JSON 매핑 + 시큐리티 + 예외 핸들러)"를 집중적으로 확인
  */
-@SpringBootTest //스프링 부트 전체 컨텍스트 로드 (실제 애플리케이션과 거의 동일 환경)
+/*@SpringBootTest //스프링 부트 전체 컨텍스트 로드 (실제 애플리케이션과 거의 동일 환경)
 @AutoConfigureMockMvc        // MockMvc 자동 설정 (HTTP 요청/응답을 테스트 코드에서 시뮬레이션)
-@Transactional               // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지
-public class UserControllerTest {
+@Transactional       */        // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지
+public class UserControllerTest extends BaseIntegrationTest {
 
     @Autowired //의존성 주입DI
     private MockMvc mockMvc;
