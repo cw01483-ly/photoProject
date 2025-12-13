@@ -43,6 +43,7 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'  // 인터페이스
     runtimeOnly  'io.jsonwebtoken:jjwt-impl:0.11.5'   // 실제 JWT 생성/검증 구현체
     runtimeOnly  'io.jsonwebtoken:jjwt-jackson:0.11.5' // JSON <-> 객체 변환용
+    testImplementation 'com.h2database:h2' // 테스트에서만 H2 사용
 }
 
 tasks.named('test') {

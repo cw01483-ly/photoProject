@@ -8,6 +8,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.support.BaseIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -36,6 +38,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 /*
     CommentControllerTest
@@ -44,10 +48,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     - MockMvc 를 사용하여 /api/posts/{postId}/comments 엔드포인트를 호출하고
       응답(JSON)과 DB 상태를 함께 확인.
  */
-@SpringBootTest
+/*@SpringBootTest
 @AutoConfigureMockMvc
-
-public class CommentControllerTest {
+@ActiveProfiles("test")*/
+public class CommentControllerTest extends BaseIntegrationTest {
 
     private final MockMvc mockMvc; // 가짜 HTTP 요청/응답을 수행할 핵심 객체
     private final ObjectMapper objectMapper; // 자바 객체를 JSON 문자열로 변환하기 위한 Jackson 객체
@@ -55,7 +59,8 @@ public class CommentControllerTest {
     private final PostRepository postRepository; // 게시글 엔티티 저장/조회용 리포지토리
     private final CommentRepository commentRepository; // 댓글 엔티티 저장/조회용 리포지토리
 
-
+    @PersistenceContext
+    private EntityManager entityManager;
     /*
         생성자 주입
         - @Autowired 생성자를 통해 필요한 의존성을 모두 주입받는다.
@@ -119,6 +124,10 @@ public class CommentControllerTest {
                 "ADMIN",
                 admin.getId()
         );
+
+        entityManager.flush();
+        entityManager.clear();
+
         return userRepository.findById(admin.getId())
                 .orElseThrow(() -> new IllegalStateException("관리자 유저 재조회 실패"));
     }
