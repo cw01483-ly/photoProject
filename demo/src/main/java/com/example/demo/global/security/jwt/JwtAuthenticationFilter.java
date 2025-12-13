@@ -13,8 +13,10 @@ import java.io.IOException;
 /*
     JwtAuthenticationFilter
     - /api/** 요청에서 쿠키의 JWT를 읽어서 인증 처리할 예정
-*/
-@Component
+    - @Component 제거: 서블릿 필터로 "전체 요청"에 자동 등록되는 것을 방지
+ */
+
+//@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
