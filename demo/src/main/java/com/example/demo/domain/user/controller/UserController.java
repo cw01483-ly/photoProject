@@ -7,12 +7,19 @@ import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.service.UserService;
 import com.example.demo.global.response.ApiResponse;
+import com.example.demo.global.security.CustomUserDetails;
+import com.example.demo.global.security.jwt.properties.JwtProperties;
+import com.example.demo.global.security.jwt.service.JwtService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +51,9 @@ public class UserController {
         전역 예외 처리기(@ControllerAdvice) 추가 시 한글 표준 응답으로 변환 예정.
  */
     private final UserService userService; //서비스 계층 의존성(비지니스 로직 호출하기)
+    private final JwtService jwtService;
+    private final JwtProperties jwtProperties;
+
     // HTTP POST요청 처리, 사용자 등록
     @PostMapping //HTTP POST요청 처리, 사용자 등록
     public ResponseEntity<ApiResponse<UserResponseDto>> register(@Valid @RequestBody UserSignupRequestDto request){
@@ -66,30 +76,54 @@ public class UserController {
     // 로그인 처리
     @PostMapping("/login") // Post/api/users/Login
     public ResponseEntity<ApiResponse<UserResponseDto>> login(
-            @Valid @RequestBody UserLoginRequestDto request //username,passwrod 평문입력
+            @Valid @RequestBody UserLoginRequestDto request //username,password 평문입력
             ){
         /*
             - 로그인 요청을 처리하는 엔드포인트
-            - UserService에 위임하여 아이디·비밀번호 검증 및 마지막 로그인 시각 갱신 수행
-            - 성공 시 UserResponseDto 반환 (비밀번호 등 민감정보 제외)
-            - 실패 시 UserService에서 예외 발생 → @ControllerAdvice에서 처리 예정
+            - UserService에 위임하여 아이디,비밀번호 검증 및 마지막 로그인 시각 갱신 수행
+            - 성공 시 JWT를 HttpOnly 쿠키로 발급 ( 브라우저 자동전송, JS접근 불가 >> XSS 방어 )
+            - 응답 바디엔 UserResponseDto만 포함 (토큰 노출 X)
         */
-        // userService에서 이미 UserResponseDto를 리턴하므로 타입 맞춰주기.
+        // 1) 로그인 처리 (AuthenticationManager -> SecurityContext 저장까지 완료)
         UserResponseDto response = userService.login(request);
-        return ResponseEntity.ok(ApiResponse.success(response,"로그인 성공"));
-        // 200 Ok + 공통 포맷 반환
-    }
 
-    //READ 단일, 전체, username 조회 (사용자 조회)
+        /*
+            JWT 발급을 위해 현재 인증된 사용자 정보(principal) 꺼내기
+            - UserService.login() 에서 SecurityContextHolder에 Authentication이 이미 저장,
+               principal 타입은 CustomUserDetails
+         */
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
-    //users PK값으로 조회
-    @GetMapping("/{id}") //Get요청 /api/users/{id} 요청 처리
-    @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //2차방어선
-    public ResponseEntity<ApiResponse<UserResponseDto>> getById(
-            @PathVariable Long id){//@PathVariable Long id :URL의{id}를 변수에 담음
-        User user = userService.getById(id); //실행 비즈니스 로직, 유저서비스호출해서 명령전달
-        return ResponseEntity.ok
-                (ApiResponse.success(UserResponseDto.from(user),"단일 사용자 조회 성공")); // DTO로 감싸서 반환
+        CustomUserDetails principal =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        /*
+            JWT Access Token 생성
+             - subject : username
+             - claims  : id, role
+             - 만료시간  : jwt, accessTokenExpMinutes 설정값 기준
+         */
+        String accessToken = jwtService.generateAccessToken(principal);
+
+        /*
+             HttpOnly 쿠키 생성
+        - HttpOnly : JS 접근 차단 (XSS 방어)
+        - Path=/   : 모든 API 요청에 쿠키 포함
+        - Max-Age  : JWT 만료 시간과 동일하게 설정
+        - Secure   : HTTPS 환경에서만 true 권장
+     */
+        ResponseCookie cookie = ResponseCookie.from(jwtProperties.getCookieName(), accessToken)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(jwtProperties.getAccessTokenExpMinutes()*60L)
+                // .secure(true) HTTPS 적용 시 활성화
+                .build();
+
+        // 2) 응답 헤더에 Set-Cookie 추가 + 공통 응답 포멧 반환
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(response, "로그인 성공"));
     }
 
     //전체조회 (관리자용)
