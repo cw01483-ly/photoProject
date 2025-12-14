@@ -52,24 +52,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // 1) 이미 인증이 올라가 있으면 통과 (중복 처리 방지)
             if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                filterChain.doFilter(request, response); // 다음 필터/컨트롤러로 진행
                 return;
             }
 
             // 2) 쿠키에서 JWT 토큰 추출
             String token = extractTokenFromCookie(request, jwtProperties.getCookieName());
+
             // 토큰이 존재하지 않으면 "비로그인" 상태 그대로 다음으로 진행
             if (token == null || token.isBlank()) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
             // 3) 토큰 검증 (서명,만료,형식)
             if (!jwtService.validateToken(token)) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
             // 4) 토큰에서 username (subject) 꺼내기
             String username = jwtService.getUsername(token);
             if (username == null || username.isBlank()) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
