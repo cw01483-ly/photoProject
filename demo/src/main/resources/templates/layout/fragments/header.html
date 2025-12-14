@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<header th:fragment="header" class="app-header">
+    <div class="app-header__inner">
+        <!-- 홈(검증용 대시보드로 사용 예정) -->
+        <a class="app-logo" th:href="@{/}">PhotoProject</a>
+
+        <nav class="app-nav">
+            <a class="app-nav__link" th:href="@{/}">Home</a>
+
+            <!-- 아래는 뷰 컨트롤러 경로 확정되면 th:href로 교체 -->
+            <a class="app-nav__link" href="#">Login</a>
+            <a class="app-nav__link" href="#">Posts</a>
+            <a class="app-nav__link" href="#">Write</a>
+        </nav>
+    </div>
+</header>
+
+</html>
