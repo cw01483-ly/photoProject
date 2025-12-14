@@ -3,6 +3,8 @@ package com.example.demo.global.security;
 /* 스프링 시큐리티 전역 보안 설정 클래스*/
 
 import com.example.demo.global.security.jwt.filter.JwtAuthenticationFilter;
+import com.example.demo.global.security.jwt.handler.JwtAccessDeniedHandler;
+import com.example.demo.global.security.jwt.handler.JwtAuthenticationEntryPoint;
 import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.global.security.jwt.service.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,9 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity(prePostEnabled = true) // 메서드 보안 어노테이션 활성화(@PreAuthorize)
 @RequiredArgsConstructor // final 필드 생성자 주입
 public class SecurityConfig {
+
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     // @Component 제거했으니, 여기서 직접 Bean으로 만들어 주입/사용
     @Bean
@@ -72,13 +77,9 @@ public class SecurityConfig {
                         -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .exceptionHandling(ex ->ex
                         // 비로그인 -> 401
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(401);
-                        })
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         // 권한 부족 -> 403
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(403);
-                        })
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
 
                 .authorizeHttpRequests(auth -> auth
@@ -113,13 +114,9 @@ public class SecurityConfig {
 
                 .exceptionHandling(ex ->ex
                         // 비로그인 -> 401
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(401);
-                        })
-                        // 권한 부족 → 403
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(403);
-                        })
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        // 권한 부족 -> 403
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
 
                 // 요청별 인가(Authorization) 규칙 정의

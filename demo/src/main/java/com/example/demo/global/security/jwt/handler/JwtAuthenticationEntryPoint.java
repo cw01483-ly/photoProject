@@ -1,5 +1,7 @@
 package com.example.demo.global.security.jwt.handler;
 
+import com.example.demo.global.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +22,8 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public void commence(
             HttpServletRequest request,
@@ -35,5 +39,13 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         // 비로그인(인증X) 이므로 401로 통일
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+
+        ApiResponse<Void> body =
+                ApiResponse.fail("인증이 필요합니다.");
+
+        response.getWriter().write(
+                objectMapper.writeValueAsString(body)
+        );
     }
 }
