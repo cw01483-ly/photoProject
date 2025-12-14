@@ -19,7 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // 필터 위치 지정
 
-import static org.springframework.security.config.Customizer.withDefaults; // ★ 추가
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration // 설정클래스
 @EnableMethodSecurity(prePostEnabled = true) // 메서드 보안 어노테이션 활성화(@PreAuthorize)
@@ -43,9 +43,53 @@ public class SecurityConfig {
                - 기존 브라우저 화면과 궁합 고려
      */
 
+
+    /*
+        세션 로그인
+          - 현재 API체인(/api/**)은 STATELESS, 세션유지 불가하므로
+             /api/users/login 만 ★세션 허용★ 체인으로 분리
+             >>> UserService.login()에서 SecurityContextHolder에 넣은 인증이 세션에 저장, 다음요청까지 유지됨
+     */
+    // ⭐ 세션 로그인 체인 (/api/users/login) : 세션 기반 로그인 유지용
+    @Bean
+    @Order(1) // 우선순위 1 : /api/users/login 은 이 체인이 먼저 적용되도록
+    public SecurityFilterChain apiSessionLoginFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/users/login") // 이 체인은 로그인 엔드포인트에만 적용
+                .csrf(csrf -> csrf.disable()) // JSON 로그인 테스트 목적 CSRF 비활성화
+                // ↓ 세션 허용 >> "로그인 상태" 가 다음 요청까지 이어짐
+                .sessionManagement(sm
+                        -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .exceptionHandling(ex ->ex
+                        // 비로그인 -> 401
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                        })
+                        // 권한 부족 -> 403
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                        })
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        // 로그인 시도는 누구나 허용
+                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
+                        .anyRequest().denyAll() // 이 체인에서 로그인 외 요청은 차단
+                )
+
+                //로그인 체인에서는 formLogin/httpBasic 사용 X (JSON 로그인 API 사용)
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable());
+
+        return http.build();
+    }
+
+
+
+
     // ⭐ API 체인 (/api/**) : JWT 기반
     @Bean
-    @Order(1) // 우선순위 1 : /api/**는 이 체인이 먼저 적용되도록 유도
+    @Order(2) // 우선순위 2 : /api/**는 이 체인이 먼저 적용되도록 유도
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**") // 이 체인은 /api/** 요청에만 적용
@@ -55,7 +99,7 @@ public class SecurityConfig {
                                 (SessionCreationPolicy.STATELESS))
 
                 .exceptionHandling(ex ->ex
-                        // 비로그인 -> 404
+                        // 비로그인 -> 401
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);
                         })
@@ -67,8 +111,8 @@ public class SecurityConfig {
 
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입, 로그인 은 비 로그인 허용
-                        .requestMatchers(HttpMethod.POST, "/api/users", "/api/users/login").permitAll()
+                        // 회원가입은 비 로그인 허용
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         // JWT 로그아웃(POST /api/auth/logout)은 비로그인 허용 (쿠키 만료)
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         // 조회성 GET API는 공개
@@ -97,7 +141,7 @@ public class SecurityConfig {
 
     // ⭐ WEB 체인 (그 외) : 세션(formLogin) 기반
     @Bean
-    @Order(2) // /api/** 가 아닌 모든 요청 처리
+    @Order(3) // /api/** 가 아닌 모든 요청 처리
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 // 개발 단계 간편 테스트 목적 CSRF 비활성화, 추 후 ThymeLeaf 사용 시 활성화 계획
