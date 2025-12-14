@@ -3,6 +3,8 @@ package com.example.demo.global.security;
 /* 스프링 시큐리티 전역 보안 설정 클래스*/
 
 import com.example.demo.global.security.jwt.filter.JwtAuthenticationFilter;
+import com.example.demo.global.security.jwt.properties.JwtProperties;
+import com.example.demo.global.security.jwt.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,19 +30,27 @@ public class SecurityConfig {
 
     // @Component 제거했으니, 여기서 직접 Bean으로 만들어 주입/사용
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter();
+    public JwtAuthenticationFilter jwtAuthenticationFilter(
+            JwtService jwtService, // JwtService 빈 주입
+            JwtProperties jwtProperties, // JwtProperties 빈 주입
+            CustomUserDetailsService userDetailsService // CustomUserDetailsService 빈 주입
+    ) {
+        return new JwtAuthenticationFilter(jwtService, jwtProperties, userDetailsService);
     }
 
     /*
-        SecurityFilterChain을 2개로 분리
-            1) /api/** 요청
+        SecurityFilterChain을 3개로 분리
+            1) 세션 로그인
+
+            2) /api/** 요청
                - JWT(HttpOnly 쿠키) 기반 인증
                - STATELESS (세션 사용 X)
 
-            2) 그 외 화면 요청
+            3) 그 외 화면 요청
                - 세션(formLogin) 기반 인증
                - 기존 브라우저 화면과 궁합 고려
+
+
      */
 
 
@@ -90,7 +100,10 @@ public class SecurityConfig {
     // ⭐ API 체인 (/api/**) : JWT 기반
     @Bean
     @Order(2) // 우선순위 2 : /api/**는 이 체인이 먼저 적용되도록 유도
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiSecurityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) throws Exception {
         http
                 .securityMatcher("/api/**") // 이 체인은 /api/** 요청에만 적용
                 .csrf(csrf -> csrf.disable()) // 개발 단계 간편 테스트 목적 CSRF 비활성화
@@ -132,7 +145,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable());
 
         // /api/** 체인에만 JWT 필터를 붙임
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
