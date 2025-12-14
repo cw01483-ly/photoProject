@@ -54,10 +54,7 @@ public class SecurityConfig {
             3) 그 외 화면 요청
                - 세션(formLogin) 기반 인증
                - 기존 브라우저 화면과 궁합 고려
-
-
      */
-
 
     /*
         세션 로그인
@@ -149,6 +146,7 @@ public class SecurityConfig {
 
 
 
+
     // ⭐ WEB 체인 (그 외) : 세션(formLogin) 기반
     @Bean
     @Order(3) // /api/** 가 아닌 모든 요청 처리
@@ -157,10 +155,26 @@ public class SecurityConfig {
                 // 개발 단계 간편 테스트 목적 CSRF 비활성화, 추 후 ThymeLeaf 사용 시 활성화 계획
                 .csrf(csrf -> csrf.disable())
 
+                // WEB 요청에서 401/403 발생 시 Thymeleaf 에러 페이지로 보내기
+                .exceptionHandling(ex -> ex
+                        // 401 비로그인
+                        .authenticationEntryPoint
+                                ((request, response, authException) -> {
+                            response.sendRedirect("/error/401");
+                        })
+                        // 403 권한 부족
+                        .accessDeniedHandler
+                                ((request, response, authException) -> {
+                            response.sendRedirect("/error/403");
+                        })
+                )
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
+                        // 에러 페이지는 항상 공개 (무한 redirect 루프 방지)
+                        .requestMatchers("/error/**").permitAll()
+
                         // 정적 리소스,공개 페이지 허용
-                        .requestMatchers("/", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
 
                         // 나머지 임시 모두 허용 (추후 강화 계획)
                         .anyRequest().permitAll()
