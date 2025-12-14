@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::content})">
+
+<!--
+  401.html
+  - 인증되지 않은 사용자(비로그인)가 보호된 API/페이지에 접근했을 때 보여주는 화면
+  - 보안 정책: 비로그인 = 401 Unauthorized
+-->
+
+<section>
+    <h1>401 Unauthorized</h1>
+
+    <p>
+        이 페이지는 <strong>로그인하지 않은 사용자</strong>가<br/>
+        인증이 필요한 자원에 접근했을 때 표시됩니다.
+    </p>
+
+    <hr/>
+
+    <section>
+        <h2>🔐 원인</h2>
+        <ul>
+            <li>로그인하지 않은 상태에서 접근</li>
+            <li>세션 또는 JWT 인증 정보가 없음</li>
+            <li>인증 정보가 만료됨</li>
+        </ul>
+    </section>
+
+    <hr/>
+
+    <section>
+        <h2>🛠️ 해결 방법</h2>
+        <p>
+            로그인 후 다시 시도해주세요.
+        </p>
+        <!-- 실제 로그인 UI 경로 확정 후 th:href 수정 -->
+        <a href="#">로그인 페이지로 이동</a>
+    </section>
+
+    <hr/>
+
+    <section>
+        <p>
+            <strong>보안 정책 검증</strong>을 위해<br/>
+            비로그인 접근 시 401 응답을 반환하도록 설계되었습니다.
+        </p>
+    </section>
+</section>
+
+</html>
