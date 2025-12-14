@@ -11,7 +11,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +31,7 @@ import java.util.List; //목록 반환용
 public class UserService {
     private final UserRepository userRepository; // DB접근을 담당하는 Repository
     private final PasswordEncoder passwordEncoder; //비밀번호 암호화용 의존성
+    private final AuthenticationManager authenticationManager; // Spring Security 인증 처리(세션/컨텍스트 저장에 사용)
 
     @Transactional //쓰기 작업이므로 readOnly=false 로 오버라이드
     public User register(@Valid UserSignupRequestDto dto){ // 회원 등록(Create)
@@ -41,7 +48,7 @@ public class UserService {
         // 3) DTO -> 엔티티 변환 (엔티티 @Builder 사용)
         User entity = User.builder()
                 .username(dto.getUsername())
-                .password(encoded) // 나중에 encoder 붙이면 encoded 사용
+                .password(encoded)
                 .email(dto.getEmail())
                 .nickname(dto.getNickname())
                 .build();
@@ -58,6 +65,10 @@ public class UserService {
     @Transactional
     public UserResponseDto login(UserLoginRequestDto request){ //로그인 요정DTO를 받아 응답DTO를 반환하는 메서드 시작
 
+        // 요청 객체 자체 null 방어
+        if (request == null){
+            throw new IllegalArgumentException("로그인 요청이 비어있습니다.");
+        }
         // 1) 요청 DTO에서 아이디, 비밀번호 원본 문자열 꺼내기
         String rawUsername = request.getUsername(); //사용자가 입력한 username 가져오기
         String rawPassword = request.getPassword(); // 사용자가 입력한 password(암호화 전)
@@ -73,25 +84,41 @@ public class UserService {
         // 3) 아이디 문자열 정규화 (비밀번호는 정규화 X)
         String normalizedUsername = rawUsername.trim().toLowerCase();
 
-        // 4) 아이디로 회원 조회 (없으면 에러메시지)
-        User user = userRepository.findByUsername(normalizedUsername)
-                .orElseThrow(() -> { //로그로써 어느부분이 틀렸는지 기록을 남기고, 메시지는 일률적으로 처리해 보안강화.
-                    log.warn("로그인 실패 - 존재하지 않는 아이디. username={}", normalizedUsername);
-                    return new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
-                }); //UserRepository에서 Optional을 사용중이므로 orElseThrow(옵셔널 전용문법) 사용
+        /*
+            ★ 변경 핵심: AuthenticationManager 기반 로그인
+            - SecurityConfig에서 AuthenticationManager가 CustomUserDetailsService + PasswordEncoder와 연결되어 있음
+            - 여기서 authenticate(token)을 호출하면:
+                1) CustomUserDetailsService.loadUserByUsername(username) 실행
+                2) PasswordEncoder로 비밀번호 검증 자동 처리
+                3) 성공 시 Authentication 객체 반환(Principal=CustomUserDetails)
+         */
+        try{
+            // 4) 사용자 입력(username,password)로 인증 토큰 생성(인증 전)
+            UsernamePasswordAuthenticationToken authRequest =
+                    new UsernamePasswordAuthenticationToken(normalizedUsername, rawPassword);
 
-        // 5) 비밀번호 검증 ( 사용자가 입력한 평문 과 DB암호화된 비밀번호 비교 )
-        boolean matches = passwordEncoder.matches(rawPassword, user.getPassword());
-        if(!matches){
-            log.warn("로그인 실패 - 비밀번호 불일치. username={}", normalizedUsername);
+            // 5) 인증 수행 (실패 시 AuthenticationException 발생)
+            Authentication authentication = authenticationManager.authenticate(authRequest);
+
+            // 6) 인증 성공 -> SecurityContextHolder에 인증 정보 저장
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // 7) 마지막 로그인 시각 업데이트를 위해 User엔티티 조회
+            User user = userRepository.findByUsername(normalizedUsername)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found. username: " + normalizedUsername));
+
+            // 8) 마지막 로그인 시각 업데이트
+            user.updateLastLoginAt(LocalDateTime.now());
+
+            // 9) 로그인 성공 >> User엔티티 DTO 변환 후 반환
+            return UserResponseDto.from(user);
+        } catch (BadCredentialsException e){ // ID or PW 틀렸을 때 예외 메시지
+            log.warn("로그인 실패 - 아이디 또는 비밀번호 불일치. username={}", normalizedUsername);
             throw new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
-        } // boolean은 단순 맞고 틀림의 결과값을 반환하기에 throw 사용
-
-        // 6) 마지막 로그인 시각 업데이트 (User엔티티)
-        user.updateLastLoginAt(LocalDateTime.now());
-
-        // 7) 로그인 성공 -> User엔티티를 DTO로 변환 후 반환.
-        return UserResponseDto.from(user);
+        } catch (AuthenticationException e){ // 그 외 인증계열 (잠금,만료 등) 통일 처리
+            log.warn("로그인 실패 - 인증 처리 중 오류. username={}, message={}", normalizedUsername, e.getMessage());
+            throw new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
+        }
     }
 
     // username 중복검사 (DB확인)
