@@ -77,6 +77,38 @@ public class GlobalExceptionHandler {
         // body에 ErrorResponse 객체를 담아 ApiResponse 포맷으로 반환 -> JSON으로 변환되어 나감.
     }
 
+
+
+    /* 2-0) AuthenticationFailException 처리 메서드 (로그인 실패 -> 401)
+        - UserService.login()에서 아이디/비밀번호 불일치 등 인증 실패 시
+          throw new AuthenticationFailException(...) 를 던지는 경우 호출
+        - 기존 IllegalArgumentException(400) 정책과 충돌하지 않도록 "로그인 실패"만 분리 처리
+     */
+    @ExceptionHandler(AuthenticationFailException.class)
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleAuthenticationFailException(
+            AuthenticationFailException ex, // 발생한 예외 객체
+            HttpServletRequest request // 요청 정보
+    ){
+        // 인증 실패는 경고 레벨 로그로 남기기
+        log.warn("인증 실패 - path={}, message={}",
+                request.getRequestURI(),
+                ex.getMessage());
+
+        // 401 응답 바디 구성
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)
+                .status(HttpStatus.UNAUTHORIZED.value()) // 401
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        // 401 상태 코드 + 공통 실패 포맷(ApoResponse.fail)으로 감싸 반환
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED) // 401
+                .body(ApiResponse.fail(body, ex.getMessage()));
+    }
+
     /* 2-1) IllegalArgumentException 처리 메서드
         - 서비스 레이어에서 throw new IllegalArgumentException() 한 경우 호출
         - 이 메서드가 그 예외를 잡아 400코드 + 예외메시지(JSON) 형식으로 응답

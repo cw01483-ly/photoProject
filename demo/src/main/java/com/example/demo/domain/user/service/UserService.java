@@ -6,6 +6,7 @@ import com.example.demo.domain.user.dto.UserResponseDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.global.exception.AuthenticationFailException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -114,10 +115,10 @@ public class UserService {
             return UserResponseDto.from(user);
         } catch (BadCredentialsException e){ // ID or PW 틀렸을 때 예외 메시지
             log.warn("로그인 실패 - 아이디 또는 비밀번호 불일치. username={}", normalizedUsername);
-            throw new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
+            throw new AuthenticationFailException("아이디 또는 비밀번호를 확인해주세요.");
         } catch (AuthenticationException e){ // 그 외 인증계열 (잠금,만료 등) 통일 처리
             log.warn("로그인 실패 - 인증 처리 중 오류. username={}, message={}", normalizedUsername, e.getMessage());
-            throw new IllegalArgumentException("아이디 또는 비밀번호를 확인해주세요.");
+            throw new AuthenticationFailException("아이디 또는 비밀번호를 확인해주세요.");
         }
     }
 
