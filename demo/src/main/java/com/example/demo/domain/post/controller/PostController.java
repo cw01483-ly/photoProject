@@ -1,21 +1,25 @@
 package com.example.demo.domain.post.controller;
+import com.example.demo.domain.post.dto.PostCreateRequestDto;
 import com.example.demo.domain.post.dto.PostLikeCountResponseDto;
 import com.example.demo.domain.post.dto.PostLikeToggleResponseDto;
 import com.example.demo.domain.post.dto.PostResponseDto;
 import com.example.demo.domain.post.service.PostLikeService;
 import com.example.demo.domain.post.service.PostService;
 import com.example.demo.global.response.ApiResponse;
+import com.example.demo.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 // 클래스를 REST API용 컨트롤러로 지정 (메서드 리턴값을 JSON으로 응답)
 @RequiredArgsConstructor
 // final 필드를 매개변수로 받는 생성자를 롬복이 자동 생성해줌
-// -> 스프링이 PostService, PostLikeService 를 자동 주입해 줄 수 있음
+// -> 스프링이 PostService, PostLikeService 를 자동 주입
 
 @RequestMapping({"/posts","/api/posts"})
 // ✅ [수정] 이 컨트롤러의 기본 URL 경로를 "/posts"와 "/api/posts" 둘 다로 열어둠
@@ -41,20 +45,16 @@ public class PostController {
     @PostMapping
     // HTTP POST /posts 요청을 이 메서드가 처리하도록 매핑
     public ResponseEntity<ApiResponse<PostResponseDto>> createPost(
-            @RequestParam Long authorId,
-            // 쿼리스트링 또는 폼데이터에서 authorId 값을 가져옴
-            // 예: /posts?authorId=1&title=...&content=...
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @Valid @RequestBody PostCreateRequestDto request
+            ) {
+        Long authorId = principal.getId();
 
-            @RequestParam String title,
-            // 요청 파라미터에서 title 값을 가져옴
-
-            @RequestParam String content
-            // 요청 파라미터에서 content 값을 가져옴
-    ) {
-
-        // PostService의 createPost 호출
-        // 서비스 시그니처: createPost(Long authorId, String title, String content)
-        PostResponseDto responseDto = postService.createPost(authorId, title, content);
+        PostResponseDto responseDto = postService.createPost(
+                authorId,
+                request.getTitle(),
+                request.getContent()
+        );
 
         // 생성된 게시글 정보를 JSON 으로 응답
         // HTTP 상태코드 200 OK + Body에 PostResponseDto 담아서 반환
