@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>회원가입 | PhotoProject</title>
+
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+
+<!-- header -->
+<div th:replace="layout/fragments/header :: header"></div>
+
+<main class="container">
+
+    <!-- 페이지 헤더 -->
+    <section class="signup-highlight">
+        <h1>회원가입</h1>
+        <p class="muted signup-highlight-text">
+            📷 계정을 생성하고 사진과 게시글을 공유해보세요.
+        </p>
+    </section>
+
+    <!-- 회원가입 카드 -->
+    <section class="card signup-card">
+
+        <form method="post" action="#" class="form" novalidate>
+
+            <!-- 필드 그룹 -->
+            <fieldset class="form-fieldset">
+                <legend class="form-legend">계정 정보</legend>
+
+                <!-- 아이디 -->
+                <div class="form-group">
+                    <label for="username">📸 ID</label>
+                    <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            placeholder="ex) photo1995"
+                            autocomplete="username"
+                            minlength="4"
+                            maxlength="20"
+                            required
+                    >
+                    <small class="form-help">
+                        4~20자 / 영문+숫자 조합
+                    </small>
+                </div>
+
+                <!-- 닉네임 -->
+                <div class="form-group">
+                    <label for="nickname">⭐ Nickname</label>
+                    <input
+                            id="nickname"
+                            name="nickname"
+                            type="text"
+                            placeholder="게시글/댓글에 표시될 이름"
+                            autocomplete="nickname"
+                            minlength="4"
+                            maxlength="30"
+                            required
+                    >
+                    <small class="form-help">
+                        4~30자 한글·영문·숫자·_ 사용 가능
+                    </small>
+                </div>
+
+                <!-- 이메일 -->
+                <div class="form-group">
+                    <label for="email">📧 E-Mail</label>
+                    <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="example@email.com"
+                            autocomplete="email"
+                            maxlength="100"
+                            required
+                    >
+                    <small class="form-help">
+                        계정 복구 및 알림에 사용됩니다.
+                    </small>
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="form-group">
+                    <label for="password">🔒 Password</label>
+                    <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder="ex) Password1995!"
+                            autocomplete="new-password"
+                            minlength="8"
+                            maxlength="64"
+                            required
+                    >
+                    <small class="form-help">
+                        비밀번호는 영문과 숫자를 포함한 8자 이상이여야 합니다.
+                    </small>
+                </div>
+            </fieldset>
+
+            <!-- 액션 영역 -->
+            <div class="form-actions">
+                <a class="btn btn-ghost" th:href="@{/ui/auth/login}">
+                    로그인
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    회원가입
+                </button>
+            </div>
+
+            <!-- 하단 안내 -->
+            <div class="form-footer">
+                <p class="muted">
+                    이미 계정이 있나요?
+                    <a th:href="@{/ui/auth/login}">로그인 하러가기</a>
+                </p>
+            </div>
+
+        </form>
+    </section>
+</main>
+
+<!-- footer -->
+<div th:replace="layout/fragments/footer :: footer"></div>
+
+<!-- signup 전용 최소 스타일 (정렬 담당) -->
+<style>
+    .signup-card {
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .form-fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0;
+    }
+
+    .form-legend {
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .form-group input {
+        width: 100%;
+    }
+
+    .form-help {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .form-footer {
+        margin-top: 12px;
+        text-align: right;
+    }
+
+    .form-footer p {
+        font-size: 0.85rem;
+    }
+
+    .signup-highlight {
+    text-align: center;
+    margin-top: 8px;
+    }
+
+.signup-highlight-text {
+    font-weight: 700;
+    font-size: 1.5em;
+    }
+</style>
+
+</body>
+</html>
