@@ -4,50 +4,146 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>로그인 | PhotoProject</title>
 
     <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
-<!-- [연결포인트] header fragment -->
+
+<!-- header -->
 <div th:replace="layout/fragments/header :: header"></div>
 
 <main class="container">
-    <section class="page-header">
-        <h1>📷로그인</h1>
-        <p class="muted">로그인 후 게시글 & 댓글 기능을 이용해보세요.😊</p>
+
+    <!-- 페이지 헤더 -->
+    <section class="signup-highlight">
+        <h1>로그인</h1>
+        <p class="muted signup-highlight-text">
+            🔐 PhotoProject 계정으로 로그인하세요.
+        </p>
     </section>
 
-    <section class="card">
-        <!-- action은 다음 단계에서 /ui/auth/login 처리로 연결 (지금은 화면만 완성) -->
-        <form method="post" action="#" class="form">
-            <div class="form-row">
-                <label for="username">아이디</label>
-                <input id="username" name="username" type="text" placeholder="아이디를 입력하세요" autocomplete="username" required>
-            </div>
+    <!-- 로그인 카드 -->
+    <section class="card signup-card">
 
-            <div class="form-row">
-                <label for="password">비밀번호</label>
-                <input id="password" name="password" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" required>
-            </div>
+        <form method="post" action="#" class="form" novalidate>
 
+            <!-- 필드 그룹 -->
+            <fieldset class="form-fieldset">
+                <legend class="form-legend">로그인 정보</legend>
+
+                <!-- 아이디 -->
+                <div class="form-group">
+                    <label for="username">📸 ID</label>
+                    <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            placeholder="아이디를 입력하세요"
+                            autocomplete="username"
+                            minlength="4"
+                            maxlength="20"
+                            required
+                    >
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="form-group">
+                    <label for="password">🔒 Password</label>
+                    <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder="비밀번호를 입력하세요"
+                            autocomplete="current-password"
+                            minlength="8"
+                            maxlength="64"
+                            required
+                    >
+                </div>
+            </fieldset>
+
+            <!-- 액션 영역 -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">로그인</button><br>
-                <a class="btn btn-ghost" th:href="@{/ui/auth/signup}">회원가입</a>
+                <a class="btn btn-ghost" th:href="@{/ui/auth/signup}">
+                    회원가입
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    로그인
+                </button>
             </div>
 
-            <div class="form-help">
+            <!-- 하단 안내 -->
+            <div class="form-footer">
                 <p class="muted">
-                    아직 계정이 없으신가요? <br>
-                    <a th:href="@{/ui/auth/signup}"
-                       style="font-size: 0.9em">🙋 회원가입 하러가기</a>
+                    아직 계정이 없나요?
+                    <a th:href="@{/ui/auth/signup}">회원가입 하러가기</a>
                 </p>
             </div>
+
         </form>
     </section>
 </main>
 
-<!-- [연결포인트] footer fragment -->
+<!-- footer -->
 <div th:replace="layout/fragments/footer :: footer"></div>
+
+<!-- login 전용 최소 스타일 (signup과 완전 동일 패턴) -->
+<style>
+    .signup-card {
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .form-fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0;
+    }
+
+    .form-legend {
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .form-group input {
+        width: 100%;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .form-footer {
+        margin-top: 12px;
+        text-align: right;
+    }
+
+    .form-footer p {
+        font-size: 0.85rem;
+    }
+
+    .signup-highlight {
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    .signup-highlight-text {
+        font-weight: 700;
+        font-size: 1.5em;
+    }
+</style>
+
 </body>
 </html>
