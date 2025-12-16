@@ -1,19 +1,37 @@
 package com.example.demo.domain.ui.controller; // UI(Thymeleaf) 전용 컨트롤러 패키지
 
+import com.example.demo.domain.post.dto.PostResponseDto;
+import com.example.demo.domain.post.service.PostService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+@RequiredArgsConstructor
 @Controller // REST(JSON) 응답이 아니라 "HTML 뷰"를 반환하는 컨트롤러
 @RequestMapping("/ui/posts")
 public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 컨트롤러
 
+    private final PostService postService;
+
     @GetMapping // GET /ui/posts
-    public String listPage() { // 게시글 목록 화면
-        return "pages/posts/list"; // templates/pages/posts/list.html 로 이동
-    }
+    public String listPage(  // 게시글 목록 화면
+        @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC)Pageable pageable,
+        Model model
+        ){ // 게시글 목록 화면
+            Page<PostResponseDto> page = postService.getPosts(pageable); // 실 게시글 목록
+
+            model.addAttribute("page", page); // 페이지 정보
+            model.addAttribute("posts", page.getContent()); // 화면에서 th:each로 돌릴 실제 목록
+            return "pages/posts/list"; // templates/pages/posts/list.html 로 이동
+        }
+
 
     @GetMapping("/write") // GET /ui/posts/write
     public String writePage() { // 게시글 작성 화면
