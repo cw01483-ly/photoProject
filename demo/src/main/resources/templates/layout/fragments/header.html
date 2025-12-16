@@ -10,9 +10,9 @@
             <a class="app-nav__link" th:href="@{/}">Home</a>
 
             <!-- 아래는 뷰 컨트롤러 경로 확정되면 th:href로 교체 -->
-            <a class="app-nav__link" href="#">Login</a>
-            <a class="app-nav__link" href="#">Posts</a>
-            <a class="app-nav__link" href="#">Write</a>
+            <a class="app-nav__link" href="@{/ui/auth/login}">Login</a>
+            <a class="app-nav__link" href="@{/ui/posts}">Posts</a>
+            <a class="app-nav__link" href="@{/ui/posts/write}">Write</a>
         </nav>
     </div>
 </header>

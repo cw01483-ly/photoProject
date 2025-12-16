@@ -1,0 +1,40 @@
+package com.example.demo.domain.ui.controller; // UI(Thymeleaf) 전용 컨트롤러 패키지
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller // REST(JSON) 응답이 아니라 "HTML 뷰"를 반환하는 컨트롤러
+@RequestMapping("/ui/posts")
+public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 컨트롤러
+
+    @GetMapping // GET /ui/posts
+    public String listPage() { // 게시글 목록 화면
+        return "pages/posts/list"; // templates/pages/posts/list.html 로 이동
+    }
+
+    @GetMapping("/write") // GET /ui/posts/write
+    public String writePage() { // 게시글 작성 화면
+        return "pages/posts/write"; // templates/pages/posts/write.html 로 이동
+    }
+
+    @GetMapping("/{id}") // GET /ui/posts/{id}
+    public String detailPage(
+            @PathVariable("id") Long id, // URL의 {id} 값을 Long으로 받음
+            Model model // 화면에 데이터 전달을 위해 Model 사용
+    ) { // 게시글 상세 화면
+        model.addAttribute("postId", id); // 화면에서 사용할 수 있도록 postId라는 이름으로 전달
+        return "pages/posts/detail"; // templates/pages/posts/detail.html 로 이동
+    }
+
+    @GetMapping("/{id}/edit") // GET /ui/posts/{id}/edit
+    public String editFormPage(
+            @PathVariable("id") Long id, // 수정할 게시글 id
+            Model model // 화면에 데이터 전달
+    ) { // 게시글 수정 폼 화면 (form.html 사용)
+        model.addAttribute("postId", id); // 화면에서 id 기반으로 기존 데이터 조회/표시할 수 있게 전달
+        return "pages/posts/form"; // templates/pages/posts/form.html 로 이동
+    }
+}
