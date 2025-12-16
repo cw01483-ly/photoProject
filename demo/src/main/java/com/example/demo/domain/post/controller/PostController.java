@@ -149,7 +149,7 @@ public class PostController {
     }
 
     // 6. 게시글 수정
-    //    [PUT] /posts/{id}?title=새제목&content=새내용
+    //    [PUT] /api/posts/{id}?title=새제목&content=새내용
 
     @PutMapping("/{id}")
     // HTTP PUT /posts/{id} 요청을 이 메서드가 처리
@@ -161,12 +161,16 @@ public class PostController {
             @RequestParam String title,
             // 변경할 제목을 요청 파라미터에서 가져옴
 
-            @RequestParam String content
+            @RequestParam String content,
             // 변경할 내용을 요청 파라미터에서 가져옴
+
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
+        Long userId = principal.getId();
+
         // PostService의 updatePost 호출
         // 서비스 시그니처: updatePost(Long postId, String title, String content)
-        PostResponseDto responseDto = postService.updatePost(postId, title, content);
+        PostResponseDto responseDto = postService.updatePost(postId, userId, title, content);
 
         // 수정된 게시글 정보를 200 OK로 반환
         return ResponseEntity.ok( // HTTP 200 OK 응답 생성
@@ -176,19 +180,21 @@ public class PostController {
     }
 
     // 7. 게시글 삭제 (Soft Delete)
-    //    [DELETE] /posts/{id}
+    //    [DELETE] /api/posts/{id}
 
     @DeleteMapping("/{id}")
     // HTTP DELETE /posts/{id} 요청을 이 메서드가 처리
     // 예: DELETE /posts/10
     public ResponseEntity<ApiResponse<Void>> deletePost( // 반환 타입을 ApiResponse<Void>로 변경
-            @PathVariable("id") Long postId
+            @PathVariable("id") Long postId,
             // URL 경로의 {id}를 postId로 매핑
+            @AuthenticationPrincipal CustomUserDetails principal
     ) {
+        Long userId = principal.getId();
 
         // PostService의 deletePost 호출
         // 내부에서 soft delete 처리(is_deleted=true) 수행
-        postService.deletePost(postId);
+        postService.deletePost(postId, userId);
 
         // 응답 바디 없이 204 No Content 반환
         // "요청은 성공했지만 돌려줄 데이터는 없다"는 의미

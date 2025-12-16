@@ -406,16 +406,40 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("게시글 수정 성공 : 유효한 값으로 PUT /api/posts/{id} 호출 시 200과 수정된 PostResponseDto 반환")
     void updatePost_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
+        String rawPwd = "Password123!";
         User author = userRepository.save(
                 User.builder()
                         .username("author1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPwd))
                         .nickname("수정작성자")
                         .email("update@example.com")
                         .build()
         );
 
-        // [GIVEN-2] 업데이트 대상 개시글 생성
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "author1",
+                "password": "Password123!"
+            }
+            """;
+
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull();
+
+        // [GIVEN-3] 업데이트 대상 개시글 생성
         Post post1 = postRepository.save(
                 Post.builder()
                         .title("원래 제목")
@@ -424,16 +448,16 @@ public class PostControllerTest extends BaseIntegrationTest {
                         .author(author)
                         .build()
         );
-
         Long postId = post1.getId();
 
-        // [GIVEN-3] 수정할 제목 & 내용 준비
+        // [GIVEN-4] 수정할 제목 & 내용 준비
         String newTitle = "새로운 제목";
         String newContent = "새로운 내용";
 
-        // [WHEN] PUT /api/posts/{id}?title=...&content=... 요청 전송
+        // [WHEN-2] PUT /api/posts/{id}?title=...&content=... 요청 전송
         var resultAction = mockMvc.perform(
                 put(BASE_URL + "/{postId}", postId)
+                        .cookie(jwtCookie) // JWT인증 추가
                         .param("title", newTitle)
                         .param("content", newContent)
                         .accept(MediaType.APPLICATION_JSON)
@@ -459,21 +483,47 @@ public class PostControllerTest extends BaseIntegrationTest {
 
 
 
+
     // ⭐ 게시글 삭제 성공 테스트 (DELETE /api/posts/{id})
     @Test
     @DisplayName("게시글 삭제 성공 : DELETE /api/posts/{id} 호출 시 200, 완료 메시지 반환")
     void deletePost_success() throws Exception{
         // [GIVEN-1] 작성자 생성
+        String rawPwd = "Password123!";
         User author = userRepository.save(
                 User.builder()
                         .username("author1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPwd))
                         .nickname("삭제작성자")
                         .email("delete@example.com")
                         .build()
         );
 
-        // [GIVEN-2] 삭제 대상 게시글 생성
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "author1",
+                "password": "Password123!"
+            }
+            """;
+
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull();
+
+
+        // [GIVEN-3] 삭제 대상 게시글 생성
         Post post1 = postRepository.save(
                 Post.builder()
                         .title("제목")
@@ -487,6 +537,7 @@ public class PostControllerTest extends BaseIntegrationTest {
         // [WHEN] DELETE /api/posts/{id} 요청 전송
         var resultAction = mockMvc.perform(
                 delete(BASE_URL + "/{postId}", postId)
+                        .cookie(jwtCookie) // JWT 인증 추가
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -766,12 +817,45 @@ public class PostControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("게시글 수정 실패 : 존재하지 않는 ID로 수정 요청 시 400과 에러 응답 반환")
     void updatePost_notFound() throws Exception {
-        // [GIVEN] 존재하지 않는 게시글 ID
+        // [GIVEN-1] 로그인용 사용자 생성
+        String rawPw = "Password123!";
+        userRepository.save(
+                User.builder()
+                        .username("loginuser1")
+                        .password(passwordEncoder.encode(rawPw))
+                        .nickname("로그인유저")
+                        .email("loginuser@example.com")
+                        .build()
+        );
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "loginuser1",
+                "password": "Password123!"
+            }
+            """;
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull();
+
+        // [GIVEN-3] 존재하지 않는 게시글 ID
         Long notExistingId = 999999L;
 
-        // [WHEN] PUT /api/posts/{id}?title=...&content=... 요청 (없는 ID)
+        // [WHEN-2] PUT /api/posts/{id}?title=...&content=... 요청 (없는 ID)
         var resultAction = mockMvc.perform(
                 put(BASE_URL + "/{id}", notExistingId)
+                        .cookie(jwtCookie)
                         .param("title", "제목")
                         .param("content", "내용")
                         .accept(MediaType.APPLICATION_JSON)
@@ -803,12 +887,46 @@ public class PostControllerTest extends BaseIntegrationTest {
     @Test
     @DisplayName("게시글 삭제 실패 : 존재하지 않는 게시글 삭제 요청 시 400과 에러 응답 반환")
     void deletePost_notFound() throws Exception {
-        // [GIVEN] 존재하지 않는 게시글 ID
+        // [GIVEN-1] 로그인용 사용자 생성
+        String rawPw = "Password123!";
+        userRepository.save(
+                User.builder()
+                        .username("loginuser1")
+                        .password(passwordEncoder.encode(rawPw))
+                        .nickname("로그인유저")
+                        .email("loginuser@example.com")
+                        .build()
+        );
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "loginuser1",
+                "password": "Password123!"
+            }
+            """;
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull();
+
+
+        // [GIVEN-3] 존재하지 않는 게시글 ID
         Long notExistingId = 999999L;
 
-        // [WHEN] DELETE /api/posts/{id} 요청 (없는 ID)
+        // [WHEN-2] DELETE /api/posts/{id} 요청 (없는 ID)
         var resultAction = mockMvc.perform(
                 delete(BASE_URL + "/{id}", notExistingId)
+                        .cookie(jwtCookie)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 

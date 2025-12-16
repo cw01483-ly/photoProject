@@ -228,10 +228,15 @@ public class PostService {
         - 게시글 없으면 예외
         - softDelete 적용으로 삭제된 글 조회 X
     */
-    public PostResponseDto updatePost(Long postId, String title, String content){
+    public PostResponseDto updatePost(Long postId,Long userId, String title, String content){
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
+
+        // 작성자 검증
+        if (!post.getAuthor().getId().equals(userId)){
+            throw new IllegalStateException("작성자만 게시글을 수정할 수 있습니다.");
+        }
 
         /* 6-2) 엔티티의 비지니스 메서드 사용하여 제목/내용 수정
             - Post.update(title,content) 내부에서 null,공백 체크 + trim 처리
@@ -246,13 +251,18 @@ public class PostService {
 
     // 7. 게시글 삭제 ( Soft Delete )
     @Transactional
-    public void deletePost(Long postId){
+    public void deletePost(Long postId, Long userId){
         /* 7-1) 삭제할 게시글 조회
             - softDelete 적용(@Where is_deleted=false)
             - 이미 삭제된 글(is_deleted=true)은 조회 X
         */
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id="+postId));
+
+        // 작성자 검증
+        if (!post.getAuthor().getId().equals(userId)){
+            throw new IllegalStateException("작성자만 게시글을 삭제할 수 있습니다.");
+        }
 
         /* 7-2) 엔티티의 delete() 메서드 호출
             - Post.delete() 내부에서 isDeleted=true로 설정
