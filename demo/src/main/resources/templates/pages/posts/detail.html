@@ -15,55 +15,80 @@
 
 <main class="container">
     <section class="card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-            <div>
-                <h1>게시글 상세</h1>
-                <p class="muted mt-1">
-                    현재는 UI 뼈대 단계
-                </p>
-            </div>
 
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-                <a class="btn btn-ghost" th:href="@{/ui/posts}">목록</a>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+            <a class="btn btn-ghost" th:href="@{/ui/posts}">목록</a>
 
-                <!-- 수정 화면 이동 (라우팅은 이미 UiPostController에 있음) -->
-                <a class="btn btn-ghost" th:href="@{/ui/posts/{id}/edit(id=${postId})}">수정</a>
+            <!-- 수정 화면 이동 -->
+            <a class="btn btn-ghost" th:href="@{/ui/posts/{id}/edit(id=${post.id})}">수정</a>
 
-                <!-- 삭제는 UI만(동작은 다음 단계에서) -->
-                <button class="btn btn-danger" type="button" disabled>삭제</button>
-            </div>
+            <!-- 삭제는 UI만(동작은 다음 단계에서) -->
+            <button class="btn btn-danger" type="button" disabled>삭제</button>
         </div>
+
 
         <hr class="mt-3" style="border:none; border-top:1px solid #eee;">
 
         <!-- 게시글 본문 영역 -->
         <div class="mt-3">
-            <!--  현재 단계에서는 postId만 전달되므로, 화면에서 최소 표시 -->
+
             <p class="muted" style="margin:0;">
-                Post ID:
-                <strong th:text="${postId}">0</strong>
+                게시글 번호:
+                <strong th:text="${post.id}">0</strong>
             </p>
 
-            <h2 class="mt-2" style="margin-bottom:8px;">
-                (제목은 다음 단계에서 바인딩됩니다)
+            <h2 class="mt-2" style="margin-bottom:8px;" th:text="${post.title}">
+                제목
             </h2>
 
             <div class="muted" style="display:flex; gap:12px; flex-wrap:wrap;">
-                <span>작성자: (다음 단계)</span>
-                <span>작성일: (다음 단계)</span>
-                <span>좋아요: (다음 단계)</span>
-                <span>조회: (다음 단계)</span>
+                <span>
+                    작성자:
+                    <strong th:text="${post.authorName}">작성자</strong>
+                </span>
+                <span>
+                    작성일:
+                     <strong th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2025-12-17 12:00</strong>
+                </span>
+                <span>
+                    좋아요:
+                <strong th:text="${post.likeCount}">0</strong>
+                </span>
+                <span>
+                    조회:
+                <strong th:text="${post.views}">0</strong>
+                </span>
             </div>
 
-            <div class="mt-3" style="white-space:pre-wrap; line-height:1.6;">
-                (내용은 다음 단계)
+            <div class="mt-3" style="white-space:pre-wrap; line-height:1.6;" th:text="${post.content}">
+                내용
             </div>
         </div>
 
         <hr class="mt-4" style="border:none; border-top:1px solid #eee;">
 
         <!-- 댓글 영역(자리만 먼저) -->
-        <div class="mt-3">
+        <!--<div class="mt-3">
             <h3 style="margin-bottom:10px;">댓글</h3>
 
-            <!-- 댓글 작성 폼 UI(동작은 다음 단계) -->
+            <div class="mt-2">
+                &lt;!&ndash; PostDetailResponseDto에 comments가 있다면 출력 (없으면 이 블록은 비어있어도 정상) &ndash;&gt;
+                <div th:if="${post.comments != null and !post.comments.isEmpty()}">
+                    <div th:each="c : ${post.comments}" class="card" style="padding:12px; margin-bottom:10px;">
+                        <div class="muted" style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                            <span th:text="${c.authorName}">작성자</span>
+                            <span th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd HH:mm')}">2025-12-17 12:00</span>
+                        </div>
+                        <div class="mt-2" style="white-space:pre-wrap;" th:text="${c.content}">댓글 내용</div>
+                    </div>
+                </div>
+
+                <div th:if="${post.comments == null or post.comments.isEmpty()}">
+                    <p class="muted" style="margin:0;">댓글이 없습니다.</p>
+                </div>
+            </div>
+        </div>-->
+    </section>
+</main>
+</body>
+</html>
