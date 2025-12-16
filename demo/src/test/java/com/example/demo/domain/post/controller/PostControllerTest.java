@@ -4,14 +4,17 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository; // 게시글 DB 검증용
 import com.example.demo.domain.user.entity.User;              // 작성자 엔티티
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.support.BaseIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지*/
 @ActiveProfiles("test")
 public class PostControllerTest extends BaseIntegrationTest {
+
+    private static final String BASE_URL = "/api/posts";
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtProperties jwtProperties;
 
     @Autowired
     private MockMvc mockMvc;
@@ -72,55 +83,81 @@ public class PostControllerTest extends BaseIntegrationTest {
           실제 DB에 반영되었는지 2차 검증을 하기 위한 용도
      */
 
-    // ⭐ 게시글 생성 성공 테스트 (POST /posts)
+    // ⭐ 게시글 생성 성공 테스트 (POST /api/posts)
     @Test
-    @DisplayName("게시글 생성 성공 : POST /posts 호출 시 200과 PostResponseDto 반환 ")
+    @DisplayName("게시글 생성 성공 : POST /api/posts 호출 시 200과 PostResponseDto 반환 ")
     void createPost_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
+        String rawPw = "Password123!";
+
         User author = userRepository.save(
                 User.builder()
                         .username("postauthor1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("게시글작성자")
                         .email("author@example.com")
                         .build()
         );
 
-        // [GIVEN-2] 게시글 생성 시 사용할 제목과 내용
-        String title = "테스트 게시글 제목";
-        String content = "테스트 게시글 내용";
+        // [GIVEN-2] 로그인 요청 바디(JSON) 준비
+        String loginJson = """
+                {
+                    "username": "postauthor1",
+                    "password": "Password123!"
+                }
+                """;
 
-        // [WHEN] MockMvc 사용하여 POST /posts 요청 전송
+        // [WHEN-1] 로그인 후 JWT 쿠키 발급받기
+        var loginResult = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson)
+                        .accept(MediaType.APPLICATION_JSON)
+        )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // [THEN-1]  로그인 응답에서 JWT 쿠키 추출
+        Cookie jwtCookie = loginResult.getResponse().getCookie(jwtProperties.getCookieName());
+        assertThat(jwtCookie).isNotNull(); //쿠키 null이면 실패
+
+        // [GIVEN-3] 게시글 생성 요청 JSON 바디 준비
+        String postCreateJson = """
+                {
+                    "title": "제목",
+                    "content": "내용"
+                }
+                """;
+
+        // [WHEN-2] JWT 쿠키를 포함하여 POST /api/posts 요청 전송
         var resultAction = mockMvc.perform(
-                post("/posts")
-                        .param("authorId", author.getId().toString())
-                        .param("title", title)
-                        .param("content", content)
-                        .accept(MediaType.APPLICATION_JSON)// JSON 응답 기대
+                post(BASE_URL)
+                        .cookie(jwtCookie)// JwtAuthenticationFilter가 쿠키에서 JWT를 읽어 SecurityContext에 인증을 올림
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postCreateJson)
+                        .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
-        // [THEN-1] HTTP 응답 코드 및 공통 응답 포맷(ApiResponse) 구조 검증
+        // [THEN-1] HTTP 응답 코드 및 공통 응답 포맷 구조 검증
         resultAction
-                .andExpect(status().isOk()) // 200 Ok
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("게시글 생성 완료"))
-                // data.title, data.content, data.authorName 등의 필드가 기대값과 일치하는지 확인
-                .andExpect(jsonPath("$.data.title").value(title))
-                .andExpect(jsonPath("$.data.content").value(content))
-                .andExpect(jsonPath("$.data.authorName").value("게시글작성자"));
+                .andExpect(jsonPath("$.data.title").value("제목"))
+                .andExpect(jsonPath("$.data.content").value("내용"))
+                .andExpect(jsonPath("$.data.authorName").value("게시글작성자"));// 닉네임
 
-        // [THEN-2] 실제 DB에도 게시글이 1건 이상 저장되었는지 2차 검증
-        long postCount = postRepository.count(); // 현재 Post 테이블의 전체 개수
-        assertThat(postCount).isGreaterThanOrEqualTo(1); // 적어도 1개 이상 존재
-        // (주의: data.sql 등으로 초기 데이터가 있을 수 있으므로 "== 1" 보다는 >= 1로 검증)
-
+        // [THEN-2] DB에 게시글이 존재하는지 2차 검증
+        long postCount = postRepository.count();
+        assertThat(postCount).isEqualTo(1);
     }
 
 
 
-    // ⭐ 게시글 단건 조회 성공 테스트 (GET /posts/{id})
+    // ⭐ 게시글 단건 조회 성공 테스트 (GET /api/posts/{id})
     @Test
-    @DisplayName("게시글 단건 조회 성공 : GET /posts/{id} 호출 시 200과 PostResponseDto 반환")
+    @DisplayName("게시글 단건 조회 성공 : GET /api/posts/{id} 호출 시 200과 PostResponseDto 반환")
     void getPostById_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
         User author = userRepository.save(
@@ -143,9 +180,9 @@ public class PostControllerTest extends BaseIntegrationTest {
         );
         Long postId = savedPost.getId(); // GET 요청할 게시글 ID
 
-        // [WHEN] GET /posts/{id} 요청 보내기
+        // [WHEN] GET /api/posts/{id} 요청 보내기
         var resultAction = mockMvc.perform(
-                get("/posts/{id}", postId)
+                get(BASE_URL+"/{postId}", postId)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -163,9 +200,9 @@ public class PostControllerTest extends BaseIntegrationTest {
     }
 
 
-    // ⭐ 전체 게시글 목록 조회 성공 테스트 (GET /posts)
+    // ⭐ 전체 게시글 목록 조회 성공 테스트 (GET /api/posts)
     @Test
-    @DisplayName("전체 조회 성공 : GET /posts 호출 시 200, 페이징된 게시글 목록 반환")
+    @DisplayName("전체 조회 성공 : GET /api/posts 호출 시 200, 페이징된 게시글 목록 반환")
     void getPosts_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
         User author = userRepository.save(
@@ -196,9 +233,9 @@ public class PostControllerTest extends BaseIntegrationTest {
                         .build()
         );
 
-        // [WHEN] GET /posts?page=0&size=10 요청 보내기
+        // [WHEN] GET /api/posts?page=0&size=10 요청 보내기
         var resultAction = mockMvc.perform(
-                get("/posts")
+                get(BASE_URL)
                         .param("page", "0") // 0번 페이지
                         .param("size", "10") // 페이지당 게시글 수
                         .accept(MediaType.APPLICATION_JSON)
@@ -218,9 +255,9 @@ public class PostControllerTest extends BaseIntegrationTest {
     }
 
 
-    // ⭐ 작성자별 게시글 목록 조회 성공 테스트 (GET /posts/author/{authorId})
+    // ⭐ 작성자별 게시글 목록 조회 성공 테스트 (GET /api/posts/author/{authorId})
     @Test
-    @DisplayName("작성자별 조회 성공 : GET /posts/author/{authorId} 호출 시 해당 작성자의 게시글만 페이징해서 반환")
+    @DisplayName("작성자별 조회 성공 : GET /api/posts/author/{authorId} 호출 시 해당 작성자의 게시글만 페이징해서 반환")
     void getPostsByAuthor_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 2명 생성
         User author1 = userRepository.save(
@@ -269,9 +306,9 @@ public class PostControllerTest extends BaseIntegrationTest {
         );
         Long authorId = author1.getId(); // 조회 대상 작성자 ID
 
-        // [WHEN] GET/posts/author/{authorId}?page=0&size=10 요청 보내기
+        // [WHEN] GET /api/posts/author/{authorId}?page=0&size=10 요청 보내기
         var resultAction = mockMvc.perform(
-                get("/posts/author/{authorId}", authorId)
+                get(BASE_URL+"/author/{authorId}", authorId)
                         .param("page", "0")
                         .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON)
@@ -294,7 +331,7 @@ public class PostControllerTest extends BaseIntegrationTest {
 
 
 
-    // ⭐ 게시글 검색 성공 테스트 (GET /posts/search)
+    // ⭐ 게시글 검색 성공 테스트 (GET /api/posts/search)
     @Test
     @DisplayName("검색 성공 : keyword가 제목&내용 포함된 게시글만 페이징 후 반환")
     void searchPosts_success() throws Exception{
@@ -338,9 +375,9 @@ public class PostControllerTest extends BaseIntegrationTest {
 
         String keyword = "테스트"; // 검색어
 
-        // [WHEN] GET /posts/search?keyword=스프링&page=0&size=10 요청
+        // [WHEN] GET /api/posts/search?keyword=스프링&page=0&size=10 요청
         var resultAction = mockMvc.perform(
-                get("/posts/search")
+                get(BASE_URL+"/search")
                         .param("keyword", keyword) // 검색어 파라미터
                         .param("page", "0")
                         .param("size", "10")
@@ -364,9 +401,9 @@ public class PostControllerTest extends BaseIntegrationTest {
     }
 
 
-    // ⭐ 게시글 수정 성공 테스트 (PUT /posts/{id})
+    // ⭐ 게시글 수정 성공 테스트 (PUT /api/posts/{id})
     @Test
-    @DisplayName("게시글 수정 성공 : 유효한 값으로 PUT /posts/{id} 호출 시 200과 수정된 PostResponseDto 반환")
+    @DisplayName("게시글 수정 성공 : 유효한 값으로 PUT /api/posts/{id} 호출 시 200과 수정된 PostResponseDto 반환")
     void updatePost_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
         User author = userRepository.save(
@@ -394,9 +431,9 @@ public class PostControllerTest extends BaseIntegrationTest {
         String newTitle = "새로운 제목";
         String newContent = "새로운 내용";
 
-        // [WHEN] PUT /posts/{id}?title=...&content=... 요청 전송
+        // [WHEN] PUT /api/posts/{id}?title=...&content=... 요청 전송
         var resultAction = mockMvc.perform(
-                put("/posts/{id}", postId)
+                put(BASE_URL + "/{postId}", postId)
                         .param("title", newTitle)
                         .param("content", newContent)
                         .accept(MediaType.APPLICATION_JSON)
@@ -422,9 +459,9 @@ public class PostControllerTest extends BaseIntegrationTest {
 
 
 
-    // ⭐ 게시글 삭제 성공 테스트 (DELETE /posts/{id})
+    // ⭐ 게시글 삭제 성공 테스트 (DELETE /api/posts/{id})
     @Test
-    @DisplayName("게시글 삭제 성공 : DELETE /posts/{id} 호출 시 200, 완료 메시지 반환")
+    @DisplayName("게시글 삭제 성공 : DELETE /api/posts/{id} 호출 시 200, 완료 메시지 반환")
     void deletePost_success() throws Exception{
         // [GIVEN-1] 작성자 생성
         User author = userRepository.save(
@@ -447,9 +484,9 @@ public class PostControllerTest extends BaseIntegrationTest {
         );
         Long postId = post1.getId(); // 삭제할 게시글 PK
 
-        // [WHEN] DELETE /posts/{id} 요청 전송
+        // [WHEN] DELETE /api/posts/{id} 요청 전송
         var resultAction = mockMvc.perform(
-                delete("/posts/{id}", postId)
+                delete(BASE_URL + "/{postId}", postId)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -465,7 +502,7 @@ public class PostControllerTest extends BaseIntegrationTest {
     }
 
 
-    // ⭐ 게시글 좋아요 토글 성공 테스트 (POST /posts/{postId}/likes)
+    // ⭐ 게시글 좋아요 토글 성공 테스트 (POST /api/posts/{postId}/likes)
     @Test
     @DisplayName("게시글 좋아요 토글 성공 : 처음 호출 시 liked=true, likeCount=1 반환")
     void togglePostLike_success() throws Exception{
@@ -491,9 +528,9 @@ public class PostControllerTest extends BaseIntegrationTest {
         Long userId = user.getId(); // 사용자 ID
         Long postId = post.getId(); // 게시글 ID
 
-        // [WHEN] POST /posts/{postId}/likes?userId=... 요청 전송 (처음 호출 >> 좋아요 ON 상태 예상)
+        // [WHEN] POST /api/posts/{postId}/likes?userId=... 요청 전송 (처음 호출 >> 좋아요 ON 상태 예상)
         var resultAction = mockMvc.perform(
-                post("/posts/{id}/likes", postId)
+                post(BASE_URL + "/{postId}/likes", postId)
                         .param("userId", userId.toString())
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
@@ -511,7 +548,7 @@ public class PostControllerTest extends BaseIntegrationTest {
 
 
 
-    // ⭐ 게시글 좋아요 개수 조회 성공 테스트 (GET /posts/{postId}/likes/count)
+    // ⭐ 게시글 좋아요 개수 조회 성공 테스트 (GET /api/posts/{postId}/likes/count)
     @Test
     @DisplayName("게시글 좋아요 개수 조회 성공 좋아요 1개인 게시글의 likeCount=1 반환")
     void getPostLikeCount_success() throws Exception{
@@ -539,14 +576,14 @@ public class PostControllerTest extends BaseIntegrationTest {
 
         // [GIVEN-3] 게시글에 미리 LikeCount 추가
         mockMvc.perform(
-                post("/posts/{postId}/likes", postId)
+                post(BASE_URL + "/{postId}/likes", postId)
                         .param("userId", userId.toString())
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
-        // [WHEN] GET /posts/{postId}/likes/count 요청 전송 (likeCount 조회 요청)
+        // [WHEN] GET /api/posts/{postId}/likes/count 요청 전송 (likeCount 조회 요청)
         var resultAction = mockMvc.perform(
-                get("/posts/{postId}/likes/count", postId)
+                get(BASE_URL + "/{postId}/likes/count", postId)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -589,7 +626,7 @@ public class PostControllerTest extends BaseIntegrationTest {
 
         // [WHEN-1] 첫 번째 토글 호출 -> likeCount 증가
         var firstToggle = mockMvc.perform(
-                post("/posts/{postId}/likes", postId)
+                post(BASE_URL + "/{postId}/likes", postId)
                         .param("userId", userId.toString()) //쿼리 파라미터 userId
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
@@ -607,7 +644,7 @@ public class PostControllerTest extends BaseIntegrationTest {
 
         // [WHEN-2] 두 번째 토글 호출 -> likeCount 감소
         var secondToggle = mockMvc.perform(
-                post("/posts/{postId}/likes", postId)
+                post(BASE_URL + "/{postId}/likes", postId)
                         .param("userId", userId.toString())
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
@@ -626,16 +663,16 @@ public class PostControllerTest extends BaseIntegrationTest {
 
 
 
-    // ⭐ 게시글 단건 조회 실패 테스트 (GET /posts/{id} - 존재하지 않는 ID)
+    // ⭐ 게시글 단건 조회 실패 테스트 (GET /api/posts/{id} - 존재하지 않는 ID)
     @Test
     @DisplayName("게시글 단건 조회 실패 : 존재하지 않는 ID로 조회 시 에러 응답 반환")
     void getPostById_notFound() throws Exception{
         // [GIVEN] 존재하지 않는 ID 준비
         Long notExistingId = 9999999L;
 
-        // [WHEN] GET /posts/{id} 요청 (존재 X)
+        // [WHEN] GET /api/posts/{id} 요청 (존재 X)
         var resultAction = mockMvc.perform(
-                get("/posts/{postId}", notExistingId)
+                get(BASE_URL + "/{postId}", notExistingId)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -651,21 +688,21 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.message")
                         .value("게시글을 찾을 수 없습니다. id=" + notExistingId))
                 .andExpect(jsonPath("$.data.path")
-                        .value("/posts/" + notExistingId));
+                        .value(BASE_URL + "/" + notExistingId));
     }
 
 
 
-    // ⭐ 게시글 수정 실패 테스트 (PUT /posts/{id} - 존재하지 않는 ID)
+    // ⭐ 게시글 수정 실패 테스트 (PUT /api/posts/{id} - 존재하지 않는 ID)
     @Test
     @DisplayName("게시글 수정 실패 : 존재하지 않는 ID로 수정 요청 시 400과 에러 응답 반환")
     void updatePost_notFound() throws Exception {
         // [GIVEN] 존재하지 않는 게시글 ID
         Long notExistingId = 999999L;
 
-        // [WHEN] PUT /posts/{id}?title=...&content=... 요청 (없는 ID)
+        // [WHEN] PUT /api/posts/{id}?title=...&content=... 요청 (없는 ID)
         var resultAction = mockMvc.perform(
-                put("/posts/{id}", notExistingId)
+                put(BASE_URL + "/{id}", notExistingId)
                         .param("title", "제목")
                         .param("content", "내용")
                         .accept(MediaType.APPLICATION_JSON)
@@ -687,22 +724,22 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.message")
                         .value("게시글을 찾을 수 없습니다. id=" + notExistingId))
                 .andExpect(jsonPath("$.data.path")
-                        .value("/posts/" + notExistingId));
+                        .value(BASE_URL + "/" + notExistingId));
         // timestamp는 매번 달라져서 검증하지 않음
     }
 
 
 
-    // ⭐ 게시글 삭제 실패 테스트 (DELETE /posts/{id} - 존재하지 않는 ID)
+    // ⭐ 게시글 삭제 실패 테스트 (DELETE /api/posts/{id} - 존재하지 않는 ID)
     @Test
     @DisplayName("게시글 삭제 실패 : 존재하지 않는 게시글 삭제 요청 시 400과 에러 응답 반환")
     void deletePost_notFound() throws Exception {
         // [GIVEN] 존재하지 않는 게시글 ID
         Long notExistingId = 999999L;
 
-        // [WHEN] DELETE /posts/{id} 요청 (없는 ID)
+        // [WHEN] DELETE /api/posts/{id} 요청 (없는 ID)
         var resultAction = mockMvc.perform(
-                delete("/posts/{id}", notExistingId)
+                delete(BASE_URL + "/{id}", notExistingId)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -722,7 +759,7 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.message")
                         .value("게시글을 찾을 수 없습니다. id=" + notExistingId))
                 .andExpect(jsonPath("$.data.path")
-                        .value("/posts/" + notExistingId));
+                        .value(BASE_URL + "/" + notExistingId));
     }
 
 }

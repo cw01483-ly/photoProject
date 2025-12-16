@@ -21,13 +21,8 @@ import org.springframework.web.bind.annotation.*;
 // final 필드를 매개변수로 받는 생성자를 롬복이 자동 생성해줌
 // -> 스프링이 PostService, PostLikeService 를 자동 주입
 
-@RequestMapping({"/posts","/api/posts"})
-// ✅ [수정] 이 컨트롤러의 기본 URL 경로를 "/posts"와 "/api/posts" 둘 다로 열어둠
-// 이유:
-// - PostControllerTest가 "/posts"로 호출하고 있어서 404가 발생했음
-// - 기존에 "/api/posts"를 쓰는 코드가 있을 수 있으니 호환성을 위해 둘 다 지원
-// 예) GET /posts, POST /posts, GET /posts/{id} 등
-// 예) GET /api/posts, POST /api/posts, GET /api/posts/{id} 등
+@RequestMapping("/api/posts")
+// 맵핑 경로 통일
 
 public class PostController {
 
