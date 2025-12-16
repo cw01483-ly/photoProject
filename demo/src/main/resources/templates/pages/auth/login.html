@@ -27,7 +27,7 @@
     <!-- 로그인 카드 -->
     <section class="card signup-card">
 
-        <form method="post" action="#" class="form" novalidate>
+        <form method="post" th:action="@{/ui/auth/login}" class="form" novalidate>
 
             <!-- 필드 그룹 -->
             <fieldset class="form-fieldset">
@@ -86,8 +86,6 @@
     </section>
 </main>
 
-<!-- footer -->
-<!--<div th:replace="layout/fragments/footer :: footer"></div>-->
 
 
 </body>
