@@ -27,7 +27,7 @@
     <!-- 작성 카드 -->
     <section class="card signup-card">
 
-        <form method="post" action="#" class="form" enctype="multipart/form-data" novalidate>
+        <form method="post" th:action="@{/ui/posts}" class="form" enctype="multipart/form-data" novalidate>
 
             <fieldset class="form-fieldset">
                 <legend class="form-legend">게시글 정보</legend>
@@ -84,27 +84,15 @@
 
             <!-- 액션 -->
             <div class="form-actions">
-                <a class="btn btn-ghost" th:href="@{/ui/posts}">
-                    목록으로
-                </a>
                 <button type="submit" class="btn btn-primary">
                     등록
                 </button>
+                <sapce>　　　　　　　　　　　　　　　　　　　</sapce>
+                <a class="btn btn-ghost" th:href="@{/ui/posts}">
+                    목록으로
+                </a>
             </div>
 
-            <!-- 하단 안내
-            <div class="form-footer">
-                <p class="muted">
-                    등록 후 게시글 목록으로 이동합니다. (예정)
-                </p>
-            </div>
-
-        </form>
-    </section>
-</main>
-
-&lt;!&ndash; footer  &ndash;&gt;
-<div th:replace="layout/fragments/footer :: footer"></div>-->
 
 </body>
 </html>
