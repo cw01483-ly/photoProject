@@ -11,13 +11,10 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 
 import static org.assertj.core.api.Assertions.assertThat; // DB 검증용
@@ -34,9 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     - 서비스 로직(PostService) 자체는 별도 단위 테스트로 검증할 수 있지만,
       여기서는 "웹 레이어(컨트롤러 + JSON/파라미터 매핑 + 예외 핸들링)"을 집중적으로 확인
  */
-/*@SpringBootTest  // 스프링 부트 전체 컨텍스트 로드 (실제 앱과 거의 동일 환경)
-@AutoConfigureMockMvc// MockMvc 자동 설정 (HTTP 요청/응답을 테스트 코드에서 시뮬레이션)
-@Transactional // 각 테스트 후 DB 롤백 → 테스트 간 데이터 간섭 방지*/
+
 @ActiveProfiles("test")
 public class PostControllerTest extends BaseIntegrationTest {
 
@@ -62,8 +57,6 @@ public class PostControllerTest extends BaseIntegrationTest {
     /*
         ObjectMapper
         - 자바 객체 <-> JSON 문자열 변환기
-        - 현재 PostController는 @RequestParam 방식이라 JSON 바디는 쓰지 않지만,
-          나중에 다른 테스트나 응답 본문 파싱 등에 사용할 수 있어 함께 주입
      */
 
     @Autowired
@@ -149,8 +142,12 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.authorName").value("게시글작성자"));// 닉네임
 
         // [THEN-2] DB에 게시글이 존재하는지 2차 검증
-        long postCount = postRepository.count();
-        assertThat(postCount).isEqualTo(1);
+        String responseBody = resultAction.andReturn().getResponse().getContentAsString();
+        // ↑ 응답 JSON 전체를 문자열로 가져오기
+        long createdPostId = objectMapper.readTree(responseBody).path("data").path("id").asLong();
+        // ↑ 그 JSON에서 data.id를 찾아 long 값으로 꺼내기
+        assertThat(createdPostId).isGreaterThan(0L); // 생성된 id가 0보다 큰지 확인
+        assertThat(postRepository.existsById(createdPostId)).isTrue(); // 실제 DB에 존재하는지 확인
     }
 
 
@@ -160,10 +157,11 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("게시글 단건 조회 성공 : GET /api/posts/{id} 호출 시 200과 PostResponseDto 반환")
     void getPostById_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
+        String rawPw = "Password123!";
         User author = userRepository.save(
                 User.builder()
                         .username("postauthor1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("조회작성자")
                         .email("author@example.com")
                         .build()
@@ -205,10 +203,11 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("전체 조회 성공 : GET /api/posts 호출 시 200, 페이징된 게시글 목록 반환")
     void getPosts_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 생성
+        String rawPw = "Password123!";
         User author = userRepository.save(
                 User.builder()
                         .username("postauthor1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("목록작성자")
                         .email("list@example.com")
                         .build()
@@ -260,10 +259,11 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("작성자별 조회 성공 : GET /api/posts/author/{authorId} 호출 시 해당 작성자의 게시글만 페이징해서 반환")
     void getPostsByAuthor_success() throws Exception{
         // [GIVEN-1] 게시글 작성자 2명 생성
+        String rawPw = "Password123!";
         User author1 = userRepository.save(
                 User.builder()
                         .username("author1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("작성자1")
                         .email("user1@example.com")
                         .build()
@@ -271,7 +271,7 @@ public class PostControllerTest extends BaseIntegrationTest {
         User author2 = userRepository.save(
                 User.builder()
                         .username("author2")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("작성자2")
                         .email("user2@example.com")
                         .build()
@@ -336,10 +336,11 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("검색 성공 : keyword가 제목&내용 포함된 게시글만 페이징 후 반환")
     void searchPosts_success() throws Exception{
         // [GIVEN-1] 작성자 생성
+        String rawPw = "Password123!";
         User author = userRepository.save(
                 User.builder()
                         .username("author1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("작성자1")
                         .email("example@example.com")
                         .build()
@@ -366,7 +367,7 @@ public class PostControllerTest extends BaseIntegrationTest {
         // [GIVEN-3] 키워드 미포함 게시글 생성
         Post testPost3 = postRepository.save(
                 Post.builder()
-                        .title(" 제목")
+                        .title("제목")
                         .content("내용")
                         .author(author)
                         .displayNumber(3L)
@@ -375,7 +376,7 @@ public class PostControllerTest extends BaseIntegrationTest {
 
         String keyword = "테스트"; // 검색어
 
-        // [WHEN] GET /api/posts/search?keyword=스프링&page=0&size=10 요청
+        // [WHEN] GET /api/posts/search?keyword=테스트&page=0&size=10 요청
         var resultAction = mockMvc.perform(
                 get(BASE_URL+"/search")
                         .param("keyword", keyword) // 검색어 파라미터
@@ -947,6 +948,71 @@ public class PostControllerTest extends BaseIntegrationTest {
                         .value("게시글을 찾을 수 없습니다. id=" + notExistingId))
                 .andExpect(jsonPath("$.data.path")
                         .value(BASE_URL + "/" + notExistingId));
+    }
+
+
+    // ⭐ 게시글 생성 실패 (비로그인)
+    @Test
+    @DisplayName("게시글 생성 실패 : 비로그인 사용자 POST /api/posts 호출 시 401 Unauthorized")
+    void createPost_unauthorized_whenNotLogin() throws Exception {
+        String postCreateJson = """
+            {
+                "title": "제목",
+                "content": "내용"
+            }
+            """;
+
+        mockMvc.perform(
+                        post(BASE_URL)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(postCreateJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized()); // 401
+    }
+
+
+
+    // ⭐ 게시글 수정 실패 (비로그인)
+    @Test
+    @DisplayName("게시글 수정 실패 : 비로그인 사용자 PUT /api/posts/{id} 호출 시 401 Unauthorized")
+    void updatePost_unauthorized_whenNotLogin() throws Exception {
+        mockMvc.perform(
+                        put(BASE_URL + "/{postId}", 1L)
+                                .param("title", "수정제목")
+                                .param("content", "수정내용")
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+    }
+
+
+
+    // ⭐ 게시글 삭제 실패 (비로그인)
+    @Test
+    @DisplayName("게시글 삭제 실패 : 비로그인 사용자 DELETE /api/posts/{id} 호출 시 401 Unauthorized")
+    void deletePost_unauthorized_whenNotLogin() throws Exception {
+        mockMvc.perform(
+                        delete(BASE_URL + "/{postId}", 1L)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+    }
+
+
+    // ⭐ 게시글 Like 실패 (비로그인)
+    @Test
+    @DisplayName("게시글 좋아요 토글 실패 : 비로그인 사용자가 POST /api/posts/{id}/likes 호출 시 401 Unauthorized")
+    void togglePostLike_unauthorized_whenNotLogin() throws Exception {
+        mockMvc.perform(
+                        post(BASE_URL + "/{postId}/likes", 1L)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
     }
 
 }
