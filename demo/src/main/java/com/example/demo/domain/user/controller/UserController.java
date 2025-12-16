@@ -147,6 +147,17 @@ public class UserController {
                 (ApiResponse.success(UserResponseDto.from(user), "username 기준 조회 성공")); // 200 OK + 단일DTO 반환
     }
 
+    // id로 조회
+    @GetMapping("/{id}") // GET /api/users/{id}
+    @PreAuthorize("hasRole('ADMIN') or #id == principal.id") // 본인 또는 관리자만
+    public ResponseEntity<ApiResponse<UserResponseDto>> getById(@PathVariable Long id){
+        // userService.getById(id) : 해당 id 사용자를 조회 (없으면 예외 -> 전역 예외 처리에서 404 처리)
+        User user = userService.getById(id);
+
+        // 테스트(UserControllerTest)에서 message가 "단일 사용자 조회 성공" 을 기대하므로 메시지를 동일하게 반환
+        return ResponseEntity.ok(ApiResponse.success(UserResponseDto.from(user), "단일 사용자 조회 성공"));
+    }
+
     // UPDATE 닉네임, 이메일 부분 수정하기 (본인 or 관리자)
 
     //닉네임 수정하기
