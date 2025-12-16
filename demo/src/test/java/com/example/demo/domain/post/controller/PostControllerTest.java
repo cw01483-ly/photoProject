@@ -507,31 +507,53 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("게시글 좋아요 토글 성공 : 처음 호출 시 liked=true, likeCount=1 반환")
     void togglePostLike_success() throws Exception{
         // [GIVEN-1] 사용자 생성
+        String rawPw = "Password123!";
         User user = userRepository.save(
                 User.builder()
                         .username("user1")
-                        .password("Password123!")
-                        .nickname("usernick")
+                        .password(passwordEncoder.encode(rawPw))
+                        .nickname("nickname")
                         .email("like@example.com")
                         .build()
         );
 
-        // [GIVEN-2] 게시글 생성
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+                {
+                    "username": "user1",
+                    "password": "Password123!"
+                }
+                """;
+
+        // [WHEN-1] 로그인 후 JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson)
+                        .accept(MediaType.APPLICATION_JSON)
+        )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+        assertThat(jwtCookie).isNotNull();
+
+        // [GIVEN-3] 게시글 생성
         Post post = postRepository.save(
                 Post.builder()
                         .title("제목")
                         .content("내용")
-                        .displayNumber(1L)
                         .author(user)
+                        .displayNumber(1L)
                         .build()
         );
-        Long userId = user.getId(); // 사용자 ID
-        Long postId = post.getId(); // 게시글 ID
+        Long postId = post.getId();
 
-        // [WHEN] POST /api/posts/{postId}/likes?userId=... 요청 전송 (처음 호출 >> 좋아요 ON 상태 예상)
+        // [WHEN-2] JWT 쿠키 포함하여 좋아요 토글 요청
         var resultAction = mockMvc.perform(
                 post(BASE_URL + "/{postId}/likes", postId)
-                        .param("userId", userId.toString())
+                        .cookie(jwtCookie) // userId 파라미터 제거, JWT인증 사용
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -541,7 +563,7 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
                 .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
-                .andExpect(jsonPath("$.data.userId").value(userId.intValue()))
+                .andExpect(jsonPath("$.data.userId").value(user.getId().intValue()))
                 .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1)); // 첫토글 = likeCount 1
     }
@@ -553,16 +575,41 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("게시글 좋아요 개수 조회 성공 좋아요 1개인 게시글의 likeCount=1 반환")
     void getPostLikeCount_success() throws Exception{
         // [GIVEN-1] 사용자 생성
+        String rawPw = "Password123!";
+
         User user = userRepository.save(
                 User.builder()
                         .username("user1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("usernick")
                         .email("like@example.com")
                         .build()
         );
 
-        // [GIVEN-2] 게시글 생성
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "user1",
+                "password": "Password123!"
+            }
+            """;
+
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull(); // 쿠키 null이면 실패(이후 좋아요 요청이 401 될 수 있음)
+
+        // [GIVEN-] 게시글 생성
         Post post = postRepository.save(
                 Post.builder()
                         .title("제목")
@@ -572,12 +619,11 @@ public class PostControllerTest extends BaseIntegrationTest {
                         .build()
         );
         Long postId = post.getId();
-        Long userId = user.getId();
 
         // [GIVEN-3] 게시글에 미리 LikeCount 추가
         mockMvc.perform(
                 post(BASE_URL + "/{postId}/likes", postId)
-                        .param("userId", userId.toString())
+                        .cookie(jwtCookie)
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -603,16 +649,40 @@ public class PostControllerTest extends BaseIntegrationTest {
     @DisplayName("게시글 좋아요 토글 2회 호출 시 좋아요가 취소되고 likeCount=0 반환")
     void togglePostLike_twice_success() throws Exception{
         // [GIVEN-1] 사용자 생성
+        String rawPw = "Password123!";
         User user = userRepository.save(
                 User.builder()
                         .username("user1")
-                        .password("Password123!")
+                        .password(passwordEncoder.encode(rawPw))
                         .nickname("usernick")
                         .email("like@like.com")
                         .build()
         );
 
-        // [GIVEN-2] 게시글 생성
+        // [GIVEN-2] 로그인 요청(JSON)
+        String loginJson = """
+            {
+                "username": "user1",
+                "password": "Password123!"
+            }
+            """;
+
+        // [WHEN-1] 로그인 → JWT 쿠키 발급
+        var loginResult = mockMvc.perform(
+                        post("/api/users/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson)
+                                .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie jwtCookie = loginResult.getResponse()
+                .getCookie(jwtProperties.getCookieName());
+
+        assertThat(jwtCookie).isNotNull(); // 쿠키가 없으면 이후 요청은 401 날 수 있음
+
+        // [GIVEN-3] 게시글 생성
         Post post = postRepository.save(
                 Post.builder()
                         .title("제목")
@@ -622,12 +692,11 @@ public class PostControllerTest extends BaseIntegrationTest {
                         .build()
         );
         Long postId = post.getId();
-        Long userId = user.getId();
 
-        // [WHEN-1] 첫 번째 토글 호출 -> likeCount 증가
+        // [WHEN-2] 첫 번째 토글 호출 -> likeCount 증가
         var firstToggle = mockMvc.perform(
                 post(BASE_URL + "/{postId}/likes", postId)
-                        .param("userId", userId.toString()) //쿼리 파라미터 userId
+                        .cookie(jwtCookie) // userID파라미터 제거, JWT인증 사용
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -638,14 +707,14 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
                 .andExpect(jsonPath("$.data.postId").value(postId.intValue())) // postId 일치
-                .andExpect(jsonPath("$.data.userId").value(userId.intValue())) // userId 일치
+                .andExpect(jsonPath("$.data.userId").value(user.getId().intValue())) // userId 일치
                 .andExpect(jsonPath("$.data.liked").value(true)) // 첫 토글 liked = true
                 .andExpect(jsonPath("$.data.likeCount").value(1)); // likeCount 1
 
-        // [WHEN-2] 두 번째 토글 호출 -> likeCount 감소
+        // [WHEN-3] 두 번째 토글 호출 -> likeCount 감소
         var secondToggle = mockMvc.perform(
                 post(BASE_URL + "/{postId}/likes", postId)
-                        .param("userId", userId.toString())
+                        .cookie(jwtCookie) // ★ 동일 유저로 다시 호출
                         .accept(MediaType.APPLICATION_JSON)
         ).andDo(print());
 
@@ -655,7 +724,7 @@ public class PostControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("게시글 좋아요 토글 성공"))
                 .andExpect(jsonPath("$.data.postId").value(postId.intValue()))
-                .andExpect(jsonPath("$.data.userId").value(userId.intValue()))
+                .andExpect(jsonPath("$.data.userId").value(user.getId().intValue()))
                 .andExpect(jsonPath("$.data.liked").value(false)) // 두 번째 토글 liked = false
                 .andExpect(jsonPath("$.data.likeCount").value(0)); // likeCount 0
     }

@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RestController
 // 클래스를 REST API용 컨트롤러로 지정 (메서드 리턴값을 JSON으로 응답)
 @RequiredArgsConstructor
@@ -196,6 +198,8 @@ public class PostController {
         );
     }
 
+
+
     // 8. 게시글 LIKE 토글
     /*  [POST] /posts/{postId}/likes?userId=1
             - 이미 눌린 상태면 취소, 아직 안눌렸다면 추가
@@ -204,15 +208,17 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostLikeToggleResponseDto>> togglePostLike(
             // 반환 타입을 ApiResponse<PostLikeToggleResponseDto>로 변경
             @PathVariable Long postId, //URL에서 postId 값 가져오기
-            @RequestParam Long userId  //쿼리 파라미터로 userId 전달받음
-    ){
-        // 1) 좋아요 토글 수행 ( true : 누른상태 , false : 취소 상태 )
-        boolean liked = postLikeService.toggleLike(postId,userId);
+            @AuthenticationPrincipal CustomUserDetails principal){
+        // 1) 로그인 사용자 ID는 JWT에서 꺼내기
+        Long userId = principal.getId();
 
-        // 2) 현재 게시글의 전체 LIKE 수 조회
+        // 2) 좋아요 토글 수행
+        boolean liked = postLikeService.toggleLike(postId, userId);
+
+        // 3) 현재 게시글 전체 LIKE 수 조회
         long likeCount = postLikeService.getLikeCount(postId);
 
-        // 3) 응답 DTO 구성
+        // 4) 응답 DTO 구성
         PostLikeToggleResponseDto responseDto = PostLikeToggleResponseDto.builder()
                 .postId(postId)
                 .userId(userId)
@@ -226,6 +232,8 @@ public class PostController {
                 // 좋아요 토글 결과를 ApiResponse로 감싸 반환
         );
     }
+
+
 
     // 9. 게시글 좋아요 개수 조회     [GET] /posts/{postId}/likes/count
     @GetMapping("/{postId}/likes/count")// HTTP GET /posts/{postId}/likes/count 요청시 처리 메서드
