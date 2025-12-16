@@ -8,20 +8,18 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.global.security.CustomUserDetails;
 import com.example.demo.support.BaseIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -172,7 +170,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
 
         String requestBody = toJson(requestDto);
 
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails) 사용
+        CustomUserDetails principal = new CustomUserDetails(user);
         // [WHEN] API 호출
 
         mockMvc.perform(
@@ -248,8 +247,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         User user = saveUser("commentUser1", "blank@example.com", "닉네임1");
         Post post = savePost(user, 1L, "title", "content");
 
-        //로그인 유저 principal 생성(인증)
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // ✅ 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
 
         // 요청 DTO ( 댓글 내용 공백 )
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
@@ -340,8 +339,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Post post = savePost(user, 1L, "title", "content");
         Comment comment = saveComment(post, user, "수정 전");
 
-        // 로그인 유저 principal (작성자 본인)
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
 
         // 수정 요청 DTO (댓글 내용만 바뀐다고 가정)
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
@@ -422,9 +421,10 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Post post = savePost(author, 1L, "title", "content");
         Comment comment = saveComment(post, author, "원본 댓글");
 
-        // 작성자 author 가 아닌 otherUser로 로그인
-        TestUserDetails principal =
-                userPrincipal(otherUser.getId(), otherUser.getUsername());
+        // 실제 principal(CustomUserDetails) - 다른 사용자 로그인
+        User user = saveUser("testUser1", "test@example.com", "닉네임");
+        CustomUserDetails principal = new CustomUserDetails(user);
+
 
         // 수정 요청 DTO (내용 변경)
         CommentCreateRequestDto requestDto = CommentCreateRequestDto.builder()
@@ -460,9 +460,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Post post = savePost(user, 1L, "title", "content");
         Comment comment = saveComment(post, user, "수정 전");
 
-
-        // 로그인 유저 principal
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
 
         // 요청 DTO
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
@@ -499,9 +498,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Post post = savePost(user, 1L, "title", "content");
         Comment comment = saveComment(post, user, "삭제 전");
 
-
-        // 로그인 유저 principal
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
         Long commentId = comment.getId(); // 삭제 대상 댓글ID
 
         // [WHEN & THEN] 댓글 삭제 API 호출
@@ -561,8 +559,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Comment comment = saveComment(post, author, "삭제 대상 댓글");
         Long commentId = comment.getId(); //삭제 시도할 commentID
 
-        // otherUser 로 로그인 설정
-        TestUserDetails principal = userPrincipal(otherUser.getId(), otherUser.getUsername());
+        // 실제 principal(CustomUserDetails) - 다른 사용자 로그인
+        CustomUserDetails principal = new CustomUserDetails(otherUser);
 
         // [WHEN & THEN] user2 계정으로 댓글 삭제 요청
         mockMvc.perform(
@@ -589,8 +587,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         // [GIVEN] 유저 1명 생성 (로그인용)
         User user = saveUser("testUser1", "notfound_del@example.com", "닉네임1");
 
-        // ★ 로그인 principal 생성
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
 
         // 존재하지 않는 댓글 ID 지정
         Long invalidCommentId = 9999999L;
@@ -624,8 +622,9 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Long postId = post.getId();
         Long commentId = comment.getId();
 
-        // 로그인 principal
-        TestUserDetails principal = userPrincipal(user.getId(), user.getUsername());
+        // 실제 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(user);
+
 
 
         // [WHEN-1] 댓글 삭제 요청 ( Soft Delete )
@@ -672,8 +671,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Comment comment = saveComment(post, user, "수정 전");
 
 
-        // 관리자 principal (ROLE_ADMIN)
-        TestUserDetails principal = adminPrincipal(admin.getId(), admin.getUsername());
+        // 관리자 principal도 CustomUserDetails로 생성 (ROLE_ADMIN 자동 부여됨)
+        CustomUserDetails principal = new CustomUserDetails(admin);
 
         // 수정 요청 DTO
         CommentUpdateRequestDto requestDto = CommentUpdateRequestDto.builder()
@@ -721,8 +720,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
 
         Long commentId = comment.getId();// 삭제 대상 댓글 id
 
-        // 관리자 principal
-        TestUserDetails principal = adminPrincipal(admin.getId(), admin.getUsername());
+        // ✅ 관리자 principal(CustomUserDetails)
+        CustomUserDetails principal = new CustomUserDetails(admin);
 
 
         // [WHEN * THEN] 관리자 계정으로 user댓글 삭제 요청

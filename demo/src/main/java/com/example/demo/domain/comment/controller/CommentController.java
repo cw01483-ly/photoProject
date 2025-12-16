@@ -6,6 +6,7 @@ import com.example.demo.domain.comment.dto.CommentUpdateRequestDto;
 import com.example.demo.domain.comment.entity.Comment;
 import com.example.demo.domain.comment.service.CommentService;
 import com.example.demo.global.response.ApiResponse;
+import com.example.demo.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,16 +36,17 @@ public class CommentController {
             // 반환 타입을 ApiResponse<CommentResponseDto>로 변경
             @PathVariable Long postId,// URL 경로에서 게시글 ID 추출
             @Valid @RequestBody CommentCreateRequestDto request,// 요청 본문(JSON)을 DTO로 매핑 + 검증
-            @AuthenticationPrincipal(expression = "id") Long userId// 로그인한 사용자 객체에서 id 필드만 주입받는다고 가정
-            /*
-                @AuthenticationPrincipal(expression = "id")
-                - CustomUserDetails 같은 로그인 유저 객체에 getId() 메서드가 있다고 가정
-                - 그 객체에서 id 값만 뽑아서 Long userId 파라미터로 주입
-                - 실제 구현에 따라 expression 부분은 수정될 수 있음
-             */
+            @AuthenticationPrincipal CustomUserDetails userDetails // JWT 인증된 사용자 전체 주입
             ){
+        // 비로그인 상태면 userDetails 가 null 일 가능성이 있음 (Security 401처리)
+        if (userDetails == null){
+            throw  new IllegalArgumentException("로그인이 필요합니다.");
+        }
+        // 인증된 사용자 PK(id)
+        Long userId = userDetails.getId();
+
         // 1) 서비스 계층을 통해 댓글 생성(엔티티 반환)
-        Comment createdComment = commentService.createComment(postId,userId,request.getContent());
+        Comment createdComment = commentService.createComment(postId,userDetails,request.getContent());
         // 2) 엔티티를 응답용 DTO로 변환
         CommentResponseDto responseDto = CommentResponseDto.from(createdComment);
         // 3) HTTP 201(CREATED) 상태 코드와 함께 응답 반환 (ApiResponse로 감싸서 반환)
@@ -142,17 +144,18 @@ public class CommentController {
      */
     @PatchMapping("/comments/{commentId}") // 댓글 수정 요청을 받는 엔드포인트
     public ResponseEntity<ApiResponse<CommentResponseDto>> updateComment(
-            // 반환 타입을 ApiResponse<CommentResponseDto>로 변경
-
             @PathVariable Long commentId,                            // URL 경로에서 댓글 ID 추출
             @Valid @RequestBody CommentUpdateRequestDto request,     // 요청 본문(JSON)을 DTO로 매핑 + 검증
-            @AuthenticationPrincipal(expression = "id") Long userId  // 로그인한 사용자 ID (권한 체크 시 사용 가능)
+            @AuthenticationPrincipal CustomUserDetails userDetails  // JWT 인증된 사용자 전체 주입
     ) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
 
         // 1) 서비스 계층에서 댓글 내용 수정 (엔티티 반환)
         Comment updatedComment = commentService.updateComment(
                 commentId,
-                userId,
+                userDetails,
                 request.getContent());// 서비스에 댓글 ID, 사용자 ID, 새 내용 전달 후 수정된 엔티티 반환
         /*
             현재 코드는 이미 CommentService.updateComment(commentId, userId, newContent) 형태로 구현되어 있으며,
@@ -177,18 +180,14 @@ public class CommentController {
      */
     @DeleteMapping("/comments/{commentId}")  // 댓글 삭제 요청을 받는 엔드포인트
     public ResponseEntity<ApiResponse<Void>> deleteComment(
-            // 반환 타입을 ApiResponse<Void>로 변경
-
             @PathVariable Long commentId,                            // URL 경로에서 댓글 ID 추출
-            @AuthenticationPrincipal(expression = "id") Long userId  // 로그인 유저 ID (권한 체크용으로 사용 가능)
+            @AuthenticationPrincipal CustomUserDetails userDetails  // JWT 인증된 사용자 전체 주입
     ) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
         // 1) 서비스 계층에 삭제 요청, 서비스에 댓글 ID와 로그인 유저 ID를 전달해 삭제(논리 삭제) 수행
-        commentService.deleteComment(commentId,userId);
-        /*
-            현재는 CommentService.deleteComment(commentId, userId)를 호출하도록 이미 확장되어 있으며,
-            서비스 계층에서 댓글의 작성자 ID와 로그인한 userId를 비교해
-            "댓글 작성자 본인만 삭제 가능"하도록 검증한 뒤, 논리 삭제(Soft Delete)를 수행
-         */
+        commentService.deleteComment(commentId,userDetails);
         // 2) HTTP 200 OK 상태 코드와 함께 성공 메시지 반환 (ApiResponse 사용)
         return ResponseEntity.ok( // 204 No Content 대신 200 OK + 메시지 반환으로 통일
                 ApiResponse.success("댓글 삭제 성공"));

@@ -6,7 +6,7 @@ import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
-import com.example.demo.domain.user.role.UserRole;
+import com.example.demo.global.security.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -47,7 +47,12 @@ public class CommentService {
         - 생성/저장된 Comment 엔티티 객체
      */
     @Transactional //데이터 변경되는 메서드 >> readOnly=false 트랜잭션으로 동작
-    public Comment createComment(Long postId, Long userId, String content){
+    public Comment createComment(Long postId, CustomUserDetails userDetails, String content){
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+        Long userId = userDetails.getId(); // JWT 인증된 사용자 PK
+
         // 1) 댓글 달릴 게시글(post) 조회(없으면 예외)
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
@@ -136,19 +141,24 @@ public class CommentService {
                 .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
     }
 
+
+
     // 댓글 수정
     @Transactional
-    public Comment updateComment(Long commentId, Long userId, String newContent) {
+    public Comment updateComment(Long commentId, CustomUserDetails userDetails, String newContent) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+        Long userId = userDetails.getId(); // 인증된 사용자 id
+        //  ADMIN 여부는 principal 권한으로 판별 (DB 재조회 제거)
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
         // 1) 수정할 댓글 조회
         Comment comment = commentRepository.findByIdWithAuthor(commentId);
         if (comment == null) { // JPQL 단건 조회는 Optional이 아닌 null 일 수 있음
             throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
         }
-        // 요청자 조회 + 관리자 여부 판단
-        User requester = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. id=" + userId));
-        boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인인지 검증 (작성자가 아니면 예외)
         if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
@@ -174,17 +184,20 @@ public class CommentService {
           실제 DB에서 DELETE 가 아니라 is_deleted = true 로 UPDATE 되는 "논리 삭제"가 실행됨
      */
     @Transactional
-    public void deleteComment(Long commentId, Long userId) {
+    public void deleteComment(Long commentId, CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+        Long userId = userDetails.getId(); // ✅ 인증된 사용자 id
+        //  ADMIN 여부는 principal 권한으로 판별 (DB 재조회 제거)
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
         // 1) 삭제할 댓글을 조회 (없으면 예외)
         Comment comment = commentRepository.findByIdWithAuthor(commentId);
         if (comment == null) {
             throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
         }
-        // 요청자 조회 + 관리자 여부 판단
-        User requester = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. id=" + userId));
-        boolean isAdmin = requester.getRole() == UserRole.ADMIN;
 
         // 2) 작성자 본인 검증
         if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
