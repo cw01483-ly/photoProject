@@ -215,7 +215,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
     // ⭐ 댓글 생성 실패 테스트 (로그인하지 않은 사용자)
     @Test
     @DisplayName("댓글 생성 실패 - 비로그인 사용자는 401 Unauthorized가 발생")
-    void createComment_fail_unauthenticated() throws Exception {
+    void createComment_unauthorized_whenNotLogin() throws Exception {
         // [GIVEN] 유저, 게시글 생성
         User user = saveUser("commentUser1", "login@example.com", "닉네임1");
         Post post = savePost(user, 1L, "제목", "내용");
@@ -226,7 +226,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
                 .build();
         String requestBody = toJson(requestDto);
 
-        // [WHEN & THEN]
+        // [WHEN & THEN] 인증 없이 댓글 생성 요청
         mockMvc.perform(
                 post("/api/posts/{postId}/comments", post.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -234,7 +234,10 @@ public class CommentControllerTest extends BaseIntegrationTest {
                         .content(requestBody) // 로그인 정보 X
         )
             .andDo(print())
-            .andExpect(status().isUnauthorized()); // 기대결과 401 Unauthorized
+            .andExpect(status().isUnauthorized()) // 기대결과 401 Unauthorized
+            .andExpect(jsonPath("$.message")
+                    .value("인증이 필요합니다."));
+
     }
 
 
@@ -382,7 +385,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
     // ⭐ 댓글 수정 실패 테스트
     @Test
     @DisplayName("댓글 수정 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
-    void updateComment_Fail_unauthenticated() throws Exception{
+    void updateComment_unauthorized_whenNotLogin() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
         User user = saveUser("username1", "email@example.com", "nickname");
         Post post = savePost(user, 1L, "title", "content");
@@ -402,7 +405,9 @@ public class CommentControllerTest extends BaseIntegrationTest {
                         .content(requestBody)// .with(user(principal)) X : 비로그인 상태
         )
                 .andDo(print())
-                .andExpect(status().isUnauthorized()); // 401 Unauthorized
+                .andExpect(status().isUnauthorized()) // 401 Unauthorized
+                .andExpect(jsonPath("$.message")
+                        .value("인증이 필요합니다."));
     }
 
 
@@ -410,7 +415,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
 
     // ⭐ 댓글 수정 실패 테스트
     @Test
-    @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 400 Bad Request 발생")
+    @DisplayName("댓글 수정 실패 : 작성자가 아닌 사용자가 댓글을 수정시 403 Forbidden 발생")
     void updateComment_Fail_notAuthor() throws Exception{
         // [GIVEN] 작성자 유저, 다른 유저, 게시글, 댓글 1개 생성
         // 댓글 작성자
@@ -421,9 +426,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
         Post post = savePost(author, 1L, "title", "content");
         Comment comment = saveComment(post, author, "원본 댓글");
 
-        // 실제 principal(CustomUserDetails) - 다른 사용자 로그인
-        User user = saveUser("testUser1", "test@example.com", "닉네임");
-        CustomUserDetails principal = new CustomUserDetails(user);
+
+        CustomUserDetails principal = new CustomUserDetails(otherUser);
 
 
         // 수정 요청 DTO (내용 변경)
@@ -432,7 +436,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
                 .build();
         String requestBody = toJson(requestDto);
 
-        // [WHEN & THEN] otherUser 가 author의 댓글 수정 API 호출 >> 400 기대
+        // [WHEN & THEN] otherUser 가 author의 댓글 수정 API 호출 >> 403 기대
         mockMvc.perform(
                 patch("/api/comments/{commentId}", comment.getId())
                         .with(user(principal)) // otherUser
@@ -441,12 +445,12 @@ public class CommentControllerTest extends BaseIntegrationTest {
                         .content(requestBody)
         )
                 .andDo(print())
-                .andExpect(status().isBadRequest()) //400 Bad Request
+                .andExpect(status().isForbidden()) //403 Bad Request
                 .andExpect(jsonPath("$.success").value(false))// ApiResponse.success = false
                 .andExpect(jsonPath("$.message")
-                        .value("댓글 작성자만 댓글을 수정할 수 있습니다."))
+                        .value("해당 요청에 대한 권한이 없습니다."))
                 .andExpect(jsonPath("$.data.message")
-                        .value("댓글 작성자만 댓글을 수정할 수 있습니다."));
+                        .value("해당 요청에 대한 권한이 없습니다."));
     }
 
 
@@ -524,7 +528,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
     // ⭐ 댓글 삭제 실패 테스트
     @Test
     @DisplayName("댓글 삭제 실패 : 비로그인 사용자는 401 Unauthorized가 발생")
-    void deleteComment_fail_unauthenticated() throws Exception{
+    void deleteComment_unauthorized_whenNotLogin() throws Exception{
         // [GIVEN] 유저, 게시글, 댓글 생성
         User user = saveUser("username1", "del401@example.com", "nickname");
         Post post = savePost(user, 1L, "title", "content");
@@ -539,7 +543,9 @@ public class CommentControllerTest extends BaseIntegrationTest {
                 // .with() 없이 >> 비로그인 상태
         )
                 .andDo(print())
-                .andExpect(status().isUnauthorized()); // HTTP 401 Unauthorized
+                .andExpect(status().isUnauthorized()) // HTTP 401 Unauthorized
+                .andExpect(jsonPath("$.message")
+                        .value("인증이 필요합니다."));
     }
 
 
@@ -547,7 +553,7 @@ public class CommentControllerTest extends BaseIntegrationTest {
 
     // ⭐ 댓글 삭제 실패 테스트
     @Test
-    @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 400 Bad Request가 발생")
+    @DisplayName("댓글 삭제 실패 : 다른 사용자가 댓글 삭제 요청시 403 Forbidden 발생")
     void deleteComment_fail_notAuthor() throws Exception{
         // [GIVEN] 유저2, 게시글, 댓글 생성
         // 댓글 작성자
@@ -569,12 +575,12 @@ public class CommentControllerTest extends BaseIntegrationTest {
                         .accept(MediaType.APPLICATION_JSON)
         )
                 .andDo(print())
-                .andExpect(status().isBadRequest())// IllegalArgumentException  400
+                .andExpect(status().isForbidden()) // 403
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
-                        .value("댓글 작성자만 삭제할 수 있습니다."))
+                        .value("해당 요청에 대한 권한이 없습니다."))
                 .andExpect(jsonPath("$.data.message")
-                        .value("댓글 작성자만 삭제할 수 있습니다."));
+                        .value("해당 요청에 대한 권한이 없습니다."));
     }
 
 

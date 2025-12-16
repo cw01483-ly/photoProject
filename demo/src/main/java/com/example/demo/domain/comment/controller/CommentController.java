@@ -33,17 +33,10 @@ public class CommentController {
      */
     @PostMapping("/posts/{postId}/comments")// 특정 게시글에 댓글 생성 요청을 받는 엔드포인트
     public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
-            // 반환 타입을 ApiResponse<CommentResponseDto>로 변경
             @PathVariable Long postId,// URL 경로에서 게시글 ID 추출
             @Valid @RequestBody CommentCreateRequestDto request,// 요청 본문(JSON)을 DTO로 매핑 + 검증
             @AuthenticationPrincipal CustomUserDetails userDetails // JWT 인증된 사용자 전체 주입
             ){
-        // 비로그인 상태면 userDetails 가 null 일 가능성이 있음 (Security 401처리)
-        if (userDetails == null){
-            throw  new IllegalArgumentException("로그인이 필요합니다.");
-        }
-        // 인증된 사용자 PK(id)
-        Long userId = userDetails.getId();
 
         // 1) 서비스 계층을 통해 댓글 생성(엔티티 반환)
         Comment createdComment = commentService.createComment(postId,userDetails,request.getContent());
@@ -148,9 +141,6 @@ public class CommentController {
             @Valid @RequestBody CommentUpdateRequestDto request,     // 요청 본문(JSON)을 DTO로 매핑 + 검증
             @AuthenticationPrincipal CustomUserDetails userDetails  // JWT 인증된 사용자 전체 주입
     ) {
-        if (userDetails == null) {
-            throw new IllegalArgumentException("로그인이 필요합니다.");
-        }
 
         // 1) 서비스 계층에서 댓글 내용 수정 (엔티티 반환)
         Comment updatedComment = commentService.updateComment(
@@ -183,9 +173,6 @@ public class CommentController {
             @PathVariable Long commentId,                            // URL 경로에서 댓글 ID 추출
             @AuthenticationPrincipal CustomUserDetails userDetails  // JWT 인증된 사용자 전체 주입
     ) {
-        if (userDetails == null) {
-            throw new IllegalArgumentException("로그인이 필요합니다.");
-        }
         // 1) 서비스 계층에 삭제 요청, 서비스에 댓글 ID와 로그인 유저 ID를 전달해 삭제(논리 삭제) 수행
         commentService.deleteComment(commentId,userDetails);
         // 2) HTTP 200 OK 상태 코드와 함께 성공 메시지 반환 (ApiResponse 사용)

@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException; // 403
 
 import java.util.List;
 
@@ -48,9 +49,7 @@ public class CommentService {
      */
     @Transactional //데이터 변경되는 메서드 >> readOnly=false 트랜잭션으로 동작
     public Comment createComment(Long postId, CustomUserDetails userDetails, String content){
-        if (userDetails == null) {
-            throw new IllegalArgumentException("로그인이 필요합니다.");
-        }
+
         Long userId = userDetails.getId(); // JWT 인증된 사용자 PK
 
         // 1) 댓글 달릴 게시글(post) 조회(없으면 예외)
@@ -146,9 +145,7 @@ public class CommentService {
     // 댓글 수정
     @Transactional
     public Comment updateComment(Long commentId, CustomUserDetails userDetails, String newContent) {
-        if (userDetails == null) {
-            throw new IllegalArgumentException("로그인이 필요합니다.");
-        }
+
         Long userId = userDetails.getId(); // 인증된 사용자 id
         //  ADMIN 여부는 principal 권한으로 판별 (DB 재조회 제거)
         boolean isAdmin = userDetails.getAuthorities().stream()
@@ -163,7 +160,7 @@ public class CommentService {
         // 2) 작성자 본인인지 검증 (작성자가 아니면 예외)
         if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
             // 작성자가 아닌 사용자가 수정 시도할 경우 예외 발생
-            throw new IllegalArgumentException("댓글 작성자만 댓글을 수정할 수 있습니다.");
+            throw new AccessDeniedException("댓글 작성자만 댓글을 수정할 수 있습니다.");
         }
 
         // 3) 엔티티의 updateContent 메서드 호출 (내용 변경)
@@ -185,9 +182,7 @@ public class CommentService {
      */
     @Transactional
     public void deleteComment(Long commentId, CustomUserDetails userDetails) {
-        if (userDetails == null) {
-            throw new IllegalArgumentException("로그인이 필요합니다.");
-        }
+
         Long userId = userDetails.getId(); // ✅ 인증된 사용자 id
         //  ADMIN 여부는 principal 권한으로 판별 (DB 재조회 제거)
         boolean isAdmin = userDetails.getAuthorities().stream()
@@ -201,7 +196,7 @@ public class CommentService {
 
         // 2) 작성자 본인 검증
         if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
-            throw new IllegalArgumentException("댓글 작성자만 삭제할 수 있습니다.");
+            throw new AccessDeniedException("댓글 작성자만 삭제할 수 있습니다.");
         }
         /* 3) 레포지토리의 delete 메서드 호출
               @SQLDelete 설정 덕분에 실제로는
