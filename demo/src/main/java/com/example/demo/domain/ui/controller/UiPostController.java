@@ -79,8 +79,18 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
     @GetMapping("/{id}/edit") // GET /ui/posts/{id}/edit
     public String editFormPage(
             @PathVariable("id") Long id, // 수정할 게시글 id
-            Model model // 화면에 데이터 전달
-    ) { // 게시글 수정 폼 화면 (form.html 사용)
+            Model model, // 화면에 데이터 전달
+            @AuthenticationPrincipal CustomUserDetails principal
+            ) { // 게시글 수정 폼 화면 (form.html 사용)
+        // 1) 비로그인 차단
+        if (principal == null) {
+            return "redirect:/ui/auth/login?next=/ui/posts/" + id + "/edit";
+        }
+        // 2) 다른 유저 수정 차단 (authorId 비교)
+        PostDetailResponseDto post = postService.getPostDetail(id);
+        if (!post.getAuthorId().equals(principal.getId())) {
+            return "error/403";
+        }
         model.addAttribute("postId", id); // 화면에서 id 기반으로 기존 데이터 조회/표시할 수 있게 전달
         return "pages/posts/form"; // templates/pages/posts/form.html 로 이동
     }
