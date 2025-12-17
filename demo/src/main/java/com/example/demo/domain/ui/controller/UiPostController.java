@@ -101,7 +101,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
             @PathVariable("id") Long id,
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestParam("title") String title,
-            @RequestParam("content") String content
+            @RequestParam("content") String content,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         // 1) 비로그인 차단
@@ -116,7 +116,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         }
 
         // 3) 실제 수정 처리 (PostService 시그니처에 정확히 맞춤)
-        postService.updatePost(id, principal.getId(), title, content/* , image */);
+        postService.updatePost(id, principal.getId(), title, content , image);
 
         // 4) 수정 완료 후 상세로 이동
         return "redirect:/ui/posts/" + id;

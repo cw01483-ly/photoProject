@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.demo.global.file.FileStorageService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -42,6 +44,7 @@ public class PostService {
     // 댓글 조회를 위한 리포지토리 ( 게시글 상세 조회 시, 해당 게시글의 댓글 목록 가져오기 위해)
     private final PostLikeRepository postLikeRepository;
     // 게시글 좋아요 정보를 조회하기 위한 리포지토리
+    private final FileStorageService fileStorageService;
 
     // 1. 게시글 생성
     @Transactional // 글생성은 데이터 변경, readOnly=false 트랜잭션 실행
@@ -245,6 +248,31 @@ public class PostService {
         post.update(title,content);
 
         // 6-3) 수정된 엔티티를 DTO 변환 후 반환 + 수정 후 게시글 LIKE 수도 함께 전달
+        long likeCount = postLikeRepository.countByPostId(postId);
+        return PostResponseDto.from(post, likeCount);
+    }
+
+    // 추가 updatPost(이미지 수정 오버로드)
+    public PostResponseDto updatePost
+    (Long postId, Long userId, String title, String content, MultipartFile image){
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
+
+        // 작성자 검증
+        if (!post.getAuthor().getId().equals(userId)){
+            throw new IllegalStateException("작성자만 게시글을 수정할 수 있습니다.");
+        }
+
+        // 1) 제목/내용 수정
+        post.update(title, content);
+
+        // 2) 이미지 처리: 파일이 없으면 기존 이미지 유지
+        if (image != null && !image.isEmpty()) {
+            String savedPath = fileStorageService.save(image); // 로컬저장
+            post.changeImage(savedPath); // 엔티티저장
+        }
+
+        // 3) 반환 DTO
         long likeCount = postLikeRepository.countByPostId(postId);
         return PostResponseDto.from(post, likeCount);
     }

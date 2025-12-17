@@ -87,6 +87,9 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
     @Builder.Default
     private boolean isDeleted=false;
 
+    // 게시글 이미지 경로(URL 또는 파일 경로)
+    @Column(name = "image_path")
+    private String imagePath;
     /*
                         비지니스 메서드 영역
      */
@@ -119,6 +122,10 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
         this.isDeleted=true;
         //DB에서 실제로 삭제하지 않고 isDeleted 값을 true로 변경하여 논리삭제 처리
     }
-    
+
+    // 게시글 이미지 변경 메서드
+    public void changeImage(String imagePath) {
+        this.imagePath = imagePath;
+    }
 
 }
