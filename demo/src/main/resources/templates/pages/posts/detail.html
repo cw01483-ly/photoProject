@@ -20,10 +20,12 @@
             <a class="btn btn-ghost" th:href="@{/ui/posts}">목록</a>
 
             <!-- 수정 화면 이동 -->
-            <a class="btn btn-ghost" th:href="@{/ui/posts/{id}/edit(id=${post.id})}">수정</a>
+            <th:block th:if="${viewerId != null and post.authorId == viewerId}">
+                <a class="btn btn-ghost" th:href="@{/ui/posts/{id}/edit(id=${post.id})}">수정</a>
 
-            <!-- 삭제는 UI만(동작은 다음 단계에서) -->
-            <button class="btn btn-danger" type="button" disabled>삭제</button>
+                <!-- 삭제는 UI만(동작은 다음 단계에서) -->
+                <button class="btn btn-danger" type="button" disabled>삭제</button>
+            </th:block>
         </div>
 
 

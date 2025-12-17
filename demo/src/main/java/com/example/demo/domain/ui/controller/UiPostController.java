@@ -12,6 +12,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 
 import java.security.Principal;
 
@@ -61,11 +63,16 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
     @GetMapping("/{id}") // GET /ui/posts/{id}
     public String detailPage(
             @PathVariable("id") Long id, // URL의 {id} 값을 Long으로 받음
-            Model model // 화면에 데이터 전달을 위해 Model 사용
-    ) { // 게시글 상세 화면
+            Model model, // 화면에 데이터 전달을 위해 Model 사용
+            @AuthenticationPrincipal CustomUserDetails principal
+            ) { // 게시글 상세 화면
         PostDetailResponseDto post = postService.getPostDetail(id); // 상세 데이터 바인딩
         model.addAttribute("post", post);
         model.addAttribute("postId", id); // 화면에서 사용할 수 있도록 postId라는 이름으로 전달
+
+        // 로그인 사용자 id (비로그인 = null)
+        Long viewerId = (principal != null) ? principal.getId() : null;
+        model.addAttribute("viewerId", viewerId);
         return "pages/posts/detail"; // templates/pages/posts/detail.html 로 이동
     }
 

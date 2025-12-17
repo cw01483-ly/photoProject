@@ -11,7 +11,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.stereotype.Controller; // UI 컨트롤러
 import org.springframework.web.bind.annotation.GetMapping; // GET 매핑
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
-import org.springframework.web.bind.annotation.RequestMapping; // 🔥 prefix 매핑
+import org.springframework.web.bind.annotation.RequestMapping; // prefix 매핑
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
@@ -47,7 +47,7 @@ public class UiAuthController {
         return "redirect:/ui/posts";
     }
 
-    @GetMapping("/signup") // 🔥 GET /ui/auth/signup
+    @GetMapping("/signup") // GET /ui/auth/signup
     public String signupPage() {
         return "pages/auth/signup";
     }
