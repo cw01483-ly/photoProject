@@ -253,6 +253,7 @@ public class PostService {
     }
 
     // 추가 updatPost(이미지 수정 오버로드)
+    @Transactional
     public PostResponseDto updatePost
     (Long postId, Long userId, String title, String content, MultipartFile image){
         Post post = postRepository.findById(postId)
@@ -268,8 +269,16 @@ public class PostService {
 
         // 2) 이미지 처리: 파일이 없으면 기존 이미지 유지
         if (image != null && !image.isEmpty()) {
-            String savedPath = fileStorageService.save(image); // 로컬저장
-            post.changeImage(savedPath); // 엔티티저장
+            String oldImagePath = post.getImagePath(); // 기존 이미지 백업
+            String savedPath = fileStorageService.save(image); // 새 이미지 저장
+            post.changeImage(savedPath); // DB에 새 경로 반영
+            // 새 이미지 저장 성공 후 기존 파일 삭제
+            if (oldImagePath != null
+                    && !oldImagePath.isBlank()
+                    && !oldImagePath.equals(savedPath)) {
+
+                fileStorageService.delete(oldImagePath); // 실제 파일 삭제
+            }
         }
 
         // 3) 반환 DTO
