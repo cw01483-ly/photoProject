@@ -11,7 +11,7 @@
 
 <body>
 <!-- 공통 헤더 -->
-<!--<div th:replace="~{layout/fragments/header :: header}"></div>-->
+<div th:replace="~{layout/fragments/header :: header}"></div>
 
 <main class="container">
     <section class="card">
@@ -83,12 +83,12 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-3" th:if="${session.user != null}">
+            <div class="mt-3" th:if="${#request.userPrincipal != null}">
                 <form th:action="@{/ui/posts/{id}/comments(id=${post.id})}"
                       method="post">
 
-            <textarea name="content" class="input" rows="3" placeholder="댓글을 입력하세요" required
-                      style="width:100%; resize:vertical;"></textarea>
+                    <textarea name="content" class="input" rows="3" placeholder="댓글을 입력하세요" required
+                              style="width:100%; resize:vertical;"></textarea>
 
                     <div style="text-align:right; margin-top:8px;">
                         <button type="submit" class="btn btn-primary">댓글 작성</button>
@@ -97,7 +97,7 @@
             </div>
 
             <!-- 비로그인 사용자 안내 -->
-            <div class="mt-3" th:if="${session.user == null}">
+            <div class="mt-3" th:if="${#request.userPrincipal == null}">
                 <p class="muted">
                     댓글을 작성하려면
                     <a th:href="@{/ui/auth/login}">로그인</a>

@@ -13,6 +13,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RequiredArgsConstructor
 @Controller // REST(JSON) 응답이 아니라 "HTML 뷰"를 반환하는 컨트롤러
 @RequestMapping("/ui/posts")
@@ -34,7 +36,12 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
 
 
     @GetMapping("/write") // GET /ui/posts/write
-    public String writePage() { // 게시글 작성 화면
+    public String writePage(Principal principal) { // 게시글 작성 화면
+        // 비로그인 시 로그인 화면으로
+        if (principal == null) {
+            return "redirect:/ui/auth/login?next=/ui/posts/write";
+        }
+        // 로그인 시 글씨기 화면
         return "pages/posts/write"; // templates/pages/posts/write.html 로 이동
     }
 
