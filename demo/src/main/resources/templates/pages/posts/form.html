@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>게시글 수정 | PhotoProject</title>
+
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+
+<body>
+
+<!-- 공통 헤더 -->
+<div th:replace="layout/fragments/header :: header"></div>
+
+<main class="container">
+
+    <!-- 페이지 헤더 -->
+    <section class="signup-highlight">
+        <h1>게시글 수정</h1>
+        <p class="muted signup-highlight-text">
+            ✏️ 사진과 함께 게시글 내용을 수정할 수 있습니다.
+        </p>
+    </section>
+
+    <!-- 수정 카드 -->
+    <section class="card signup-card">
+
+        <form th:action="@{/ui/posts/{id}/edit(id=${postId})}"
+              method="post"
+              class="form"
+              enctype="multipart/form-data"
+              novalidate>
+
+            <fieldset class="form-fieldset">
+                <legend class="form-legend">게시글 정보</legend>
+
+                <!-- 제목 -->
+                <div class="form-group">
+                    <label for="title">📝 제목</label>
+                    <input
+                            id="title"
+                            name="title"
+                            type="text"
+                            placeholder="제목을 입력하세요"
+                            minlength="1"
+                            maxlength="50"
+                            required
+                    >
+                </div>
+
+                <!-- 내용 -->
+                <div class="form-group">
+                    <label for="content">📄 내용</label>
+                    <textarea
+                            id="content"
+                            name="content"
+                            rows="8"
+                            placeholder="내용을 입력하세요"
+                            minlength="1"
+                            maxlength="2000"
+                            required
+                            style="width:100%; padding:10px 12px; font-size:0.95rem;
+                                   border:1px solid #ccc; border-radius:6px;"
+                    ></textarea>
+                </div>
+
+                <!-- 🔥 이미지 업로드 (수정) -->
+                <div class="form-group">
+                    <label for="image">📷 사진 변경</label>
+                    <input
+                            id="image"
+                            name="image"
+                            type="file"
+                            accept="image/*"
+                    >
+                    <small class="form-help">
+                        새 이미지를 선택하면 기존 이미지를 교체합니다.
+                        선택하지 않으면 기존 이미지는 유지됩니다.
+                    </small>
+                </div>
+
+            </fieldset>
+
+            <!-- 액션 버튼 -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    수정 완료
+                </button>
+
+                <a class="btn btn-ghost"
+                   th:href="@{/ui/posts/{id}(id=${postId})}">
+                    취소
+                </a>
+            </div>
+
+        </form>
+    </section>
+
+</main>
+</body>
+</html>

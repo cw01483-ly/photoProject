@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.security.Principal;
@@ -94,4 +95,31 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         model.addAttribute("postId", id); // 화면에서 id 기반으로 기존 데이터 조회/표시할 수 있게 전달
         return "pages/posts/form"; // templates/pages/posts/form.html 로 이동
     }
+
+    @PostMapping("/{id}/edit") // POST /ui/posts/{id}/edit (수정 폼 제출)
+    public String updatePostFromUi(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @RequestParam("title") String title,
+            @RequestParam("content") String content
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+        // 1) 비로그인 차단
+        if (principal == null) {
+            return "redirect:/ui/auth/login?next=/ui/posts/" + id + "/edit";
+        }
+
+        // 2) 서버에서 작성자 검증 (DTO의 authorId 사용)
+        PostDetailResponseDto post = postService.getPostDetail(id);
+        if (!post.getAuthorId().equals(principal.getId())) {
+            return "error/403";
+        }
+
+        // 3) 실제 수정 처리 (PostService 시그니처에 정확히 맞춤)
+        postService.updatePost(id, principal.getId(), title, content/* , image */);
+
+        // 4) 수정 완료 후 상세로 이동
+        return "redirect:/ui/posts/" + id;
+    }
+
 }
