@@ -180,6 +180,14 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
 
+                .logout(logout -> logout
+                        .logoutUrl("/ui/auth/logout")         // header의 form action과 일치
+                        .logoutSuccessUrl("/")                // 성공 후 이동
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID")
+                )
+
                 // 폼 로그인 (브라우저 테스트) 기본 로그인 페이지 사용
                 .formLogin(withDefaults()); // 람다 Customizer 스타일
 

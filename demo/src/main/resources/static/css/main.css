@@ -255,3 +255,50 @@ h2 {
     font-weight: 700;
     font-size: 1.5em;
 }
+
+/* Header */
+
+.app-header {
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+}
+
+.app-header__inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.app-logo {
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.app-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-nav__link {
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+.app-nav__link:hover {
+    text-decoration: none;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.app-nav__text {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.app-nav__form {
+    margin: 0;
+}

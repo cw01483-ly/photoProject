@@ -51,4 +51,21 @@ public class UiAuthController {
     public String signupPage() {
         return "pages/auth/signup";
     }
+
+    //  UI 로그아웃
+    @PostMapping("/logout")
+    public String logout(HttpServletRequest request) {
+        // 세션 무효화
+        var session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
+        // SecurityContext 정리
+        SecurityContextHolder.clearContext();
+
+        // 로그아웃 후 홈
+        return "redirect:/";
+    }
+
 }

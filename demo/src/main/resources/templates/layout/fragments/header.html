@@ -3,16 +3,29 @@
 
 <header th:fragment="header" class="app-header">
     <div class="app-header__inner">
-        <!-- 홈(검증용 대시보드로 사용 예정) -->
         <a class="app-logo" th:href="@{/}">PhotoProject</a>
 
         <nav class="app-nav">
-            <a class="app-nav__link" th:href="@{/}">Home</a>
+            <a class="app-nav__link" th:href="@{/}">Home |</a>
+            <a class="app-nav__link" th:href="@{/ui/posts}">Posts |</a>
+            <a class="app-nav__link" th:href="@{/ui/posts/write}">Write |</a>
 
-            <!-- 아래는 뷰 컨트롤러 경로 확정되면 th:href로 교체 -->
-            <a class="app-nav__link" href="@{/ui/auth/login}">Login</a>
-            <a class="app-nav__link" href="@{/ui/posts}">Posts</a>
-            <a class="app-nav__link" href="@{/ui/posts/write}">Write</a>
+            <!-- 로그인 상태 분기: 표준 HttpServletRequest 기반 -->
+            <th:block th:if="${#request.userPrincipal == null}"> <!--비로그인-->
+                <a class="app-nav__link" th:href="@{/ui/auth/login}">Login |</a>
+            </th:block>
+
+            <th:block th:if="${#request.userPrincipal != null}"> <!--로그인 상태-->
+                <span class="app-nav__text"
+                      th:text="|Hello, ${#request.userPrincipal.name}!|">반갑습니다, user님</span>
+
+                <!-- 로그아웃 -->
+                <form class="app-nav__form" th:action="@{/ui/auth/logout}" method="post">
+                    <input type="hidden" th:if="${_csrf != null}"
+                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button type="submit" class="btn btn-ghost">Logout</button>
+                </form>
+            </th:block>
         </nav>
     </div>
 </header>
