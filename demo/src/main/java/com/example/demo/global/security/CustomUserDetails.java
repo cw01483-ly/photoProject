@@ -44,7 +44,7 @@ public class CustomUserDetails implements UserDetails {
             권한 설정
             예) UserRole.ADMIN -> "ROLE_ADMIN"
             예) UserRole.USER  -> "ROLE_USER"
-            스프링 시큐리티는 반드시 ROLE_ 접두어가 있어야 인식함.
+            이 구현에서는 권한 문자열을 "ROLE_" + 권한명 형태로 구성하여 GrantedAuthority로 등록
          */
         this.authorities = List.of(
                 new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
