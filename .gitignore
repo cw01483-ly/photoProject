@@ -1,0 +1,4 @@
+# --- Spring config (secrets) ---
+demo/src/main/resources/application.yml
+demo/src/main/resources/application-*.yml
+!demo/src/main/resources/application-example.yml
