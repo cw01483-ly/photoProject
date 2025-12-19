@@ -44,7 +44,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         if (principal == null) {
             return "redirect:/ui/auth/login?next=/ui/posts/write";
         }
-        // 로그인 시 글씨기 화면
+        // 로그인 시 글쓰기 화면
         return "pages/posts/write"; // templates/pages/posts/write.html 로 이동
     }
 

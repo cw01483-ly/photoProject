@@ -52,7 +52,7 @@ public class UiAuthController {
         return "pages/auth/signup";
     }
 
-    //  UI 로그아웃
+    //  UI 로그아웃: 세션 무효화 + SecurityContext 정리
     @PostMapping("/logout")
     public String logout(HttpServletRequest request) {
         // 세션 무효화
