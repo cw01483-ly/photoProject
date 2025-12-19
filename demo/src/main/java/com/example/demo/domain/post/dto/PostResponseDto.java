@@ -19,7 +19,7 @@ public class PostResponseDto {
     private String title;
     private String content;
     private int views; //조회수
-    private String authorName; //작성자(User엔티티 username)
+    private String authorName; //작성자(User엔티티 nickname)
     private LocalDateTime createdAt; // 생성 시간
     private LocalDateTime updatedAt; // 마지막 수정 시간
     private long likeCount; // 해당 게시글 Like 수
