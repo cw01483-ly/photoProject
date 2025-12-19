@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>글쓰기 | PhotoProject</title>
+
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+
+<!-- header -->
+<div th:replace="layout/fragments/header :: header"></div>
+
+<main class="container">
+
+    <!-- 페이지 헤더 -->
+    <section class="signup-highlight">
+        <h1>글쓰기</h1>
+        <p class="muted signup-highlight-text">
+            ✍️ 사진과 함께 게시글을 작성해보세요.
+        </p>
+    </section>
+
+    <!-- 작성 카드 -->
+    <section class="card signup-card">
+
+
+        <form id="demoWriteForm" class="form" enctype="multipart/form-data" novalidate>
+
+            <fieldset class="form-fieldset">
+                <legend class="form-legend">게시글 정보</legend>
+
+                <!-- 제목 -->
+                <div class="form-group">
+                    <label for="title">📝 제목</label>
+                    <input
+                            id="title"
+                            name="title"
+                            type="text"
+                            placeholder="제목을 입력하세요"
+                            minlength="2"
+                            maxlength="50"
+                            required
+                    >
+                    <small class="form-help">
+                        2~50자
+                    </small>
+                </div>
+
+                <!-- 내용 -->
+                <div class="form-group">
+                    <label for="content">📄 내용</label>
+                    <textarea
+                            id="content"
+                            name="content"
+                            placeholder="내용을 입력하세요"
+                            rows="8"
+                            minlength="5"
+                            maxlength="2000"
+                            required
+                            style="width: 100%; padding: 10px 12px; font-size: 0.95rem;
+                            border: 1px solid #ccc; border-radius: 6px;"
+                    ></textarea>
+                    <small class="form-help">
+                        5~2000자
+                    </small>
+                </div>
+
+                <!-- 이미지 업로드 -->
+                <div class="form-group">
+                    <label for="image">📷 사진 업로드</label>
+                    <input
+                            id="image"
+                            name="image"
+                            type="file"
+                            accept="image/*"
+                    >
+                    <small class="form-help">
+                        JPG/PNG 등 이미지 파일을 업로드할 수 있습니다.
+                    </small>
+                </div>
+
+                <!-- 결과 메시지 표시 영역(성공/실패) -->
+                <div id="resultBox" class="form-help" style="margin-top: 10px;"></div>
+            </fieldset>
+
+            <!-- 액션 -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    등록
+                </button>
+
+                <span>　　　　　　　　　　　　　　　　　　　</span>
+
+                <a class="btn btn-ghost" th:href="@{/}">
+                    홈으로
+                </a>
+            </div>
+
+        </form>
+    </section>
+</main>
+
+<script>
+    // Demo 글쓰기: fetch + credentials:"include" 로 JWT 쿠키 포함 호출
+    document.getElementById("demoWriteForm").addEventListener("submit", async (e) => {
+        e.preventDefault(); // 기존 form submit 막기
+
+        const resultBox = document.getElementById("resultBox");
+        resultBox.textContent = "";
+
+        const title = document.getElementById("title").value;
+        const content = document.getElementById("content").value;
+        const image = document.getElementById("image").files[0];
+
+        // multipart/form-data 로 전송 (이미지 포함 가능)
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("content", content);
+        if (image) {
+            formData.append("image", image);
+        }
+
+        try {
+            const res = await fetch("/api/posts", {
+                method: "POST",
+                credentials: "include", // HttpOnly JWT 쿠키 포함
+                body: formData
+            });
+
+            // 401/403 등 실패 케이스 메시지 처리
+            if (!res.ok) {
+                if (res.status === 401) {
+                    resultBox.textContent = "❌ 로그인 필요: 로그인 후 다시 시도하세요.";
+                    return;
+                }
+                if (res.status === 403) {
+                    resultBox.textContent = "❌ 권한 없음(403): 권한 정책을 확인하세요.";
+                    return;
+                }
+
+                const text = await res.text();
+                resultBox.textContent = "❌ 작성 실패(" + res.status + "): " + text;
+                return;
+            }
+
+            // 성공
+            resultBox.textContent = "⭕ 작성 성공! (API가 정상 동작했습니다)";
+
+            // 선택: 작성 후 홈으로 이동(원하면 주석 해제)
+            // setTimeout(() => location.href = "/", 500);
+
+        } catch (err) {
+            resultBox.textContent = "❌ 네트워크/서버 오류: " + err;
+        }
+    });
+</script>
+
+</body>
+</html>

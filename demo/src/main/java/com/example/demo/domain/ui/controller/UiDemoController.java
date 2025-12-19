@@ -23,4 +23,9 @@ public class UiDemoController {
     public String demoHome(){
         return "demo/index"; // templates/demo/index.html
     }
+
+    @GetMapping("/posts/write") // GET /ui/demo/posts/write
+    public String demoWritePage(){
+        return "demo/posts/write";  // templates/demo/posts/write.html
+    }
 }
