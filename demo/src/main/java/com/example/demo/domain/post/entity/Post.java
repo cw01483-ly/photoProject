@@ -79,7 +79,7 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
 
     //조회수 카운트
     @Column(nullable = false)
-    @Builder.Default //Lombok의 @Builder는 필드 초기값을 무시함(값을 안넣으면 디폴트 미초기화상태 혹은 null)
+    @Builder.Default // @Builder 사용 시 기본 초기값(views=0)을 유지하려면 @Builder.Default가 필요함(int는 null이 아님)
     private int views=0; //조회수의 처음값 0
 
     //논리 삭제 여부(false - 정상, true = 삭제)

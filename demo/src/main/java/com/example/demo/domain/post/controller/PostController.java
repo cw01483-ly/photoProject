@@ -38,9 +38,9 @@ public class PostController {
     */
 
     // 1. 게시글 생성 API
-    //    [POST] /posts?authorId=1&title=제목&content=내용
+    //    [POST] /api/posts (Body: { "title": "...", "content": "..." }, authorId는 principal에서 획득)
     @PostMapping
-    // HTTP POST /posts 요청을 이 메서드가 처리하도록 매핑
+    // HTTP POST /api/posts 요청을 이 메서드가 처리하도록 매핑
     public ResponseEntity<ApiResponse<PostResponseDto>> createPost(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody PostCreateRequestDto request
@@ -62,7 +62,7 @@ public class PostController {
     }
 
     // 2. 게시글 단건 조회 + 조회수 증가
-    //    [GET] /posts/{id}
+    //    [GET] /api/posts/{id}
     @GetMapping("/{id}")
     // HTTP GET /posts/{id} 요청을 이 메서드가 처리
     // 예: /posts/10 -> id = 10
@@ -83,7 +83,7 @@ public class PostController {
     }
 
     // 3. 전체 게시글 최신순 조회 (페이징)
-    //    [GET] /posts?page=0&size=10&sort=id,desc
+    //    [GET] /api/posts?page=0&size=10&sort=id,desc
 
     @GetMapping
     // HTTP GET /posts 요청을 이 메서드가 처리
@@ -125,7 +125,7 @@ public class PostController {
     }
 
     // 5. 제목 + 내용 키워드 검색 (대소문자 무시, 페이징)
-    //    [GET] /posts/search?keyword=스프링&page=0&size=10
+    //    [GET] /api/posts/search?keyword=스프링&page=0&size=10
 
     @GetMapping("/search")
     // HTTP GET /posts/search 요청을 이 메서드가 처리
@@ -152,7 +152,7 @@ public class PostController {
     //    [PUT] /api/posts/{id}?title=새제목&content=새내용
 
     @PutMapping("/{id}")
-    // HTTP PUT /posts/{id} 요청을 이 메서드가 처리
+    // HTTP PUT /api/posts/{id} 요청을 이 메서드가 처리
     // 예: PUT /posts/5?title=변경&content=내용변경
     public ResponseEntity<ApiResponse<PostResponseDto>> updatePost(
             @PathVariable("id") Long postId,
@@ -183,7 +183,7 @@ public class PostController {
     //    [DELETE] /api/posts/{id}
 
     @DeleteMapping("/{id}")
-    // HTTP DELETE /posts/{id} 요청을 이 메서드가 처리
+    // HTTP DELETE /api/posts/{id} 요청을 이 메서드가 처리
     // 예: DELETE /posts/10
     public ResponseEntity<ApiResponse<Void>> deletePost( // 반환 타입을 ApiResponse<Void>로 변경
             @PathVariable("id") Long postId,
@@ -207,7 +207,7 @@ public class PostController {
 
 
     // 8. 게시글 LIKE 토글
-    /*  [POST] /posts/{postId}/likes?userId=1
+    /*  [POST] /api/posts/{postId}/likes (userId는 principal에서 획득)
             - 이미 눌린 상태면 취소, 아직 안눌렸다면 추가
     */
     @PostMapping("/{postId}/likes") // HTTP POST /posts/{postId}/likes 요청시 처리 메서드
