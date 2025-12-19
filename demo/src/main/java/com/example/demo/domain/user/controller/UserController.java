@@ -46,7 +46,7 @@ public class UserController {
     UserController
     - UserService를 호출하여 사용자 관련 HTTP 요청을 처리하는 REST 컨트롤러
     - 현재 컨트롤러는 DTO(UserSignupRequestDto, UserResponseDto) 기반으로 요청/응답을 처리.
-      (UserLoginRequestDto는 추후 로그인 API에서 사용 예정)
+      (UserLoginRequestDto는 로그인 API(/api/users/login)에서 사용)
     - 예외(예: EntityNotFoundException, IllegalStateException)는
         전역 예외 처리기(@ControllerAdvice) 추가 시 한글 표준 응답으로 변환 예정.
  */
@@ -74,7 +74,7 @@ public class UserController {
     }
 
     // 로그인 처리
-    @PostMapping("/login") // Post/api/users/Login
+    @PostMapping("/login") // Post/api/users/login
     public ResponseEntity<ApiResponse<UserResponseDto>> login(
             @Valid @RequestBody UserLoginRequestDto request //username,password 평문입력
             ){
@@ -84,11 +84,13 @@ public class UserController {
             - 성공 시 JWT를 HttpOnly 쿠키로 발급 ( 브라우저 자동전송, JS접근 불가 >> XSS 방어 )
             - 응답 바디엔 UserResponseDto만 포함 (토큰 노출 X)
         */
-        // 1) 로그인 처리 (AuthenticationManager -> SecurityContext 저장까지 완료)
+        // 1) 로그인 처리
+        // (AuthenticationManager로 인증 수행 후, UserService.login()에서 SecurityContextHolder에 직접 Authentication 저장)
         UserResponseDto response = userService.login(request);
 
         /*
-            JWT 발급을 위해 현재 인증된 사용자 정보(principal) 꺼내기
+            JWT 발급을 위해 현재 인증 주체(principal) 확인
+            CustomUserDetails 타입인 경우에만 캐스팅하여 사용자 정보 사용
             - UserService.login() 에서 SecurityContextHolder에 Authentication이 이미 저장,
                principal 타입은 CustomUserDetails
          */
