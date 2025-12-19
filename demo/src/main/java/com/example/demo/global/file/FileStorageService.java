@@ -14,9 +14,9 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    // 기본 업로드 루트 경로: C:/upload/photoProject
+    // 기본 업로드 루트 경로: D:/upload/photoProject (application.yml의 app.file.upload-dir 설정값)
     // - application.yml/properties에서 app.file.upload-dir 로 덮어쓸 수 있음
-    @Value("${app.file.upload-dir:C:/upload/photoProject}")
+    @Value("${app.file.upload-dir:D:/upload/photoProject}")
     private String uploadDir;
 
     // 실제 저장 + 저장된 "상대경로" 반환
@@ -26,7 +26,7 @@ public class FileStorageService {
             throw new IllegalArgumentException("업로드된 파일이 비어있습니다.");
         }
 
-        // posts 폴더 경로 만들기 (C:/upload/photoProject/posts)
+        // posts 폴더 경로 만들기
         Path postsDir = Paths.get(uploadDir, "posts");
 
         // posts 폴더가 없으면 생성
