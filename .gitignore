@@ -1,4 +1,61 @@
-# --- Spring config (secrets) ---
+# ==============================
+# 1) Spring config (secrets)
+# ==============================
 demo/src/main/resources/application.yml
 demo/src/main/resources/application-*.yml
 !demo/src/main/resources/application-example.yml
+
+# ==============================
+# 2) Gradle
+# ==============================
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ==============================
+# 3) STS (Spring Tool Suite / Eclipse)
+# ==============================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# ==============================
+# 4) IntelliJ IDEA
+# ==============================
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# ==============================
+# 5) NetBeans
+# ==============================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ==============================
+# 6) VS Code
+# ==============================
+.vscode/
+
+# ==============================
+# 7) OS / logs
+# ==============================
+.DS_Store
+Thumbs.db
+*.log
