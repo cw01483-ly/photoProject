@@ -43,7 +43,7 @@ public class Comment extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     // comment와author의 관계 (N:1) = 여러댓글을 하나의 유저가 작성 가능
-    // 단방향 연관관계
+    // Comment 엔티티에서 User를 참조하는 연관관계
     @JoinColumn(name = "author_id", nullable = false)
     private User author; //작성자
 

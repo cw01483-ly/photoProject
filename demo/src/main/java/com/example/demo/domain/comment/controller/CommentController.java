@@ -29,7 +29,7 @@ public class CommentController {
      /*      댓글 생성
         - HTTP POST /api/posts/{postId}/comments
         - 요청 본문: CommentCreateRequestDto (content만 포함)
-        - 로그인한 유저의 ID는 SecurityContext에서 가져온다고 가정
+        - 로그인한 유저 정보는 @AuthenticationPrincipal로 주입받은 CustomUserDetails에서 획득
      */
     @PostMapping("/posts/{postId}/comments")// 특정 게시글에 댓글 생성 요청을 받는 엔드포인트
     public ResponseEntity<ApiResponse<CommentResponseDto>> createComment(
@@ -132,8 +132,7 @@ public class CommentController {
         댓글 수정
         - HTTP PATCH /api/comments/{commentId}
         - 요청 본문: CommentUpdateRequestDto (수정할 content)
-        - 로그인한 사용자 정보는 Security에서 가져오지만,
-          여기서는 "작성자 본인만 수정 가능" 같은 권한 체크는 서비스/추가 로직에서 처리할 수 있음
+        - 작성자 본인 또는 ADMIN 여부 검증은 CommentService.updateComment 내부에서 수행됨
      */
     @PatchMapping("/comments/{commentId}") // 댓글 수정 요청을 받는 엔드포인트
     public ResponseEntity<ApiResponse<CommentResponseDto>> updateComment(
