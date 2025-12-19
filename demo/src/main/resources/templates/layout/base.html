@@ -4,17 +4,21 @@
     xmlns:th="http://www.thymeleaf.org"
     th:fragment="layout(content)">
 
-    <head th:replace="layout/fragments/head :: head"></head>
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title} ?: 'PhotoProject Demo'">PhotoProject Demo</title>
 
-     <body>
-        <header th:replace="layout/fragments/header :: header"></header>
+    <!-- 공통 CSS -->
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
 
-    <main class="container">
+<body>
 
-        <div th:insert="${content}"></div>
-    </main>
+<div th:replace="~{layout/fragments/header :: header}"></div>
 
-    <footer th:replace="layout/fragments/footer :: footer"></footer>
+<main class="container">
+    <div th:replace="${content}"></div>
+</main>
 
-    </body>
+</body>
 </html>
