@@ -24,14 +24,24 @@
     <!-- 인증 관련 -->
     <section>
         <h2>🔐 인증(Authentication)</h2>
-        <ul>
-            <!-- 실제 UI 컨트롤러 생성 후 th:href 수정 -->
-            <li><a href="/ui/demo/login">로그인 페이지</a></li>
-            <li><a href="#">회원가입 페이지 (예정)</a></li>
-        </ul>
-        <p>
-            비로그인 상태 접근 시 <strong>401 Unauthorized</strong> 반환 여부 확인
-        </p>
+        <!--로그인 상태 표시-->
+        <div th:if="${isLogin}">
+            <p>
+                로그인 상태: <strong th:text="${username}">username</strong>
+            </p>
+        <!--JWT 로그아웃-->
+            <button type="button" onclick="logout()">로그아웃</button>
+        </div>
+        <!--비로그인 상태-->
+        <div th:unless="${isLogin}">
+            <ul>
+                <li><a href="/ui/demo/login">로그인 페이지</a></li>
+                <li><a href="#">회원가입 페이지 (예정)</a></li>
+            </ul>
+            <p>
+                비로그인 상태 접근 시 <strong>401 Unauthorized</strong> 반환 여부 확인
+            </p>
+        </div>
     </section>
 
     <hr/>
@@ -69,6 +79,15 @@
             화면은 기능 검증을 위한 최소 UI로 구성되어 있습니다.
         </p>
     </section>
+    <!--JWT 로그아웃 스크립트-->
+    <script>
+        function logout() {
+            fetch("/api/auth/logout",{
+                method: "POST",
+                credentials: "include"
+            }).then(() => location.reload());
+        }
+    </script>
 </section>
 
 </html>
