@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>로그인 | PhotoProject</title>
+
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+
+<!-- header -->
+<div th:replace="layout/fragments/header :: header"></div>
+
+<main class="container">
+
+    <!-- 페이지 헤더 -->
+    <section class="signup-highlight">
+        <h1>로그인</h1>
+        <p class="muted signup-highlight-text">
+            🔐 PhotoProject 계정으로 로그인하세요.
+        </p>
+    </section>
+
+    <!-- 로그인 카드 -->
+    <section class="card signup-card">
+
+        <form id="demoLoginForm" class="form" novalidate>
+
+            <!-- 필드 그룹 -->
+            <fieldset class="form-fieldset">
+                <legend class="form-legend">로그인 정보</legend>
+
+                <!-- 아이디 -->
+                <div class="form-group">
+                    <label for="username">📸 ID</label>
+                    <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            placeholder="아이디를 입력하세요"
+                            autocomplete="username"
+                            minlength="4"
+                            maxlength="20"
+                            required
+                    >
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="form-group">
+                    <label for="password">🔒 Password</label>
+                    <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            placeholder="비밀번호를 입력하세요"
+                            autocomplete="current-password"
+                            minlength="8"
+                            maxlength="64"
+                            required
+                    >
+                </div>
+            </fieldset>
+
+            <!-- 액션 영역 -->
+            <div class="form-actions">
+                <a class="btn btn-ghost" th:href="@{/ui/auth/signup}">
+                    회원가입
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    로그인
+                </button>
+            </div>
+
+            <!-- 하단 안내 -->
+            <div class="form-footer">
+                <p class="muted">
+                    아직 계정이 없나요?
+                    <a th:href="@{/ui/auth/signup}">회원가입 하러가기</a>
+                </p>
+            </div>
+
+        </form>
+    </section>
+</main>
+
+
+<script>
+    document.getElementById("demoLoginForm").addEventListener("submit", async (e) => {
+        e.preventDefault(); // 폼 기본 submit(페이지 이동) 막기
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        const res = await fetch("/api/users/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include", //JWT HttpOnly 쿠키 저장/전송
+            body: JSON.stringify({ username, password })
+        });
+
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (e) {}
+
+        if (res.ok) {
+            alert("로그인 성공! (JWT는 HttpOnly 쿠키라 JS에서 직접 확인 불가)");
+            window.location.href = "/"; // 홈으로 이동
+            return;
+        }
+
+        // ApiResponse 형식이면 message가 있을 가능성이 큼
+        if (data && data.message) {
+            alert("로그인 실패: " + data.message);
+        } else {
+            alert("로그인 실패: " + text);
+        }
+    });
+</script>
+
+</body>
+</html>
