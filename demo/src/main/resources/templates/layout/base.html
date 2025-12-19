@@ -1,20 +1,20 @@
 <!--최상위 레이아웃-->
 <!DOCTYPE html>
 <html lang="ko"
-xmlns:th="http://www.thymeleaf.org"
-th:fragment="layout(content)">
+    xmlns:th="http://www.thymeleaf.org"
+    th:fragment="layout(content)">
 
     <head th:replace="layout/fragments/head :: head"></head>
-    <!--templates/layout/fragments/head.html 안의 th:fragment="head" 조각을 여기(head)에-->
-        <body>
-            <header th:replace="layout/fragments/header :: header"></header>
 
-        <main class="container">
+     <body>
+        <header th:replace="layout/fragments/header :: header"></header>
 
-                <div th:replace="${content}"></div>
-        </main>
+    <main class="container">
 
-        <footer th:replace="layout/fragments/footer :: footer"></footer>
+        <div th:insert="${content}"></div>
+    </main>
 
-        </body>
+    <footer th:replace="layout/fragments/footer :: footer"></footer>
+
+    </body>
 </html>
