@@ -28,7 +28,7 @@
     <section class="card signup-card">
 
 
-        <form id="demoWriteForm" class="form" enctype="multipart/form-data" novalidate>
+        <form id="demoWriteForm" class="form" novalidate>
 
             <fieldset class="form-fieldset">
                 <legend class="form-legend">게시글 정보</legend>
@@ -61,15 +61,14 @@
                             minlength="5"
                             maxlength="2000"
                             required
-                            style="width: 100%; padding: 10px 12px; font-size: 0.95rem;
-                            border: 1px solid #ccc; border-radius: 6px;"
+                            style="width: 100%; padding: 10px 12px; font-size: 0.95rem; border: 1px solid #ccc; border-radius: 6px;"
                     ></textarea>
                     <small class="form-help">
                         5~2000자
                     </small>
                 </div>
 
-                <!-- 이미지 업로드 -->
+                <!-- 이미지 업로드 API @RequestBody(JSON)기반 API검증 목적, multipart 사용X -->
                 <div class="form-group">
                     <label for="image">📷 사진 업로드</label>
                     <input
@@ -77,9 +76,11 @@
                             name="image"
                             type="file"
                             accept="image/*"
+                            disabled
                     >
                     <small class="form-help">
-                        JPG/PNG 등 이미지 파일을 업로드할 수 있습니다.
+                        Demo UI는 JSON 기반 게시글 생성 API를 검증하므로
+                        이미지 업로드 multipart는 사용하지 않습니다.
                     </small>
                 </div>
 
@@ -89,7 +90,7 @@
 
             <!-- 액션 -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+                <button id="submitBtn" type="submit" class="btn btn-primary">
                     등록
                 </button>
 
@@ -105,56 +106,75 @@
 </main>
 
 <script>
-    // Demo 글쓰기: fetch + credentials:"include" 로 JWT 쿠키 포함 호출
-    document.getElementById("demoWriteForm").addEventListener("submit", async (e) => {
-        e.preventDefault(); // 기존 form submit 막기
+    // Demo 글쓰기: fetch("/api/posts") + JSON + credentials:"include"
+    const formEl = document.getElementById("demoWriteForm");
+    const resultBox = document.getElementById("resultBox");
+    const submitBtn = document.getElementById("submitBtn");
 
-        const resultBox = document.getElementById("resultBox");
-        resultBox.textContent = "";
+    function setResult(text) {
+        resultBox.textContent = text;
+    }
+
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        submitBtn.textContent = isLoading ? "처리중..." : "등록";
+    }
+
+    async function handleErrorResponse(res) {
+        if (res.status === 401) {
+            setResult("❌ 로그인 필요: 로그인 후 다시 시도하세요.");
+            return;
+        }
+        if (res.status === 403) {
+            setResult("❌ 권한 없음(403)");
+            return;
+        }
+
+        try {
+            const text = await res.text();
+            setResult("❌ 작성 실패(" + res.status + "): " + text);
+        } catch (e) {
+            setResult("❌ 작성 실패(" + res.status + ")");
+        }
+    }
+
+    formEl.addEventListener("submit", async (e) => {
+        e.preventDefault(); // 기본 submit 차단
+
+        setResult("");
+        setLoading(true);
 
         const title = document.getElementById("title").value;
         const content = document.getElementById("content").value;
-        const image = document.getElementById("image").files[0];
-
-        // multipart/form-data 로 전송 (이미지 포함 가능)
-        const formData = new FormData();
-        formData.append("title", title);
-        formData.append("content", content);
-        if (image) {
-            formData.append("image", image);
-        }
 
         try {
             const res = await fetch("/api/posts", {
                 method: "POST",
-                credentials: "include", // HttpOnly JWT 쿠키 포함
-                body: formData
+                credentials: "include", // JWT(HttpOnly 쿠키) 포함
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: title,
+                    content: content
+                })
             });
 
-            // 401/403 등 실패 케이스 메시지 처리
             if (!res.ok) {
-                if (res.status === 401) {
-                    resultBox.textContent = "❌ 로그인 필요: 로그인 후 다시 시도하세요.";
-                    return;
-                }
-                if (res.status === 403) {
-                    resultBox.textContent = "❌ 권한 없음(403): 권한 정책을 확인하세요.";
-                    return;
-                }
-
-                const text = await res.text();
-                resultBox.textContent = "❌ 작성 실패(" + res.status + "): " + text;
+                await handleErrorResponse(res);
                 return;
             }
 
-            // 성공
-            resultBox.textContent = "⭕ 작성 성공! (API가 정상 동작했습니다)";
+            setResult("⭕ 작성 성공! (JSON 기반 게시글 생성 API 검증 완료)");
 
-            // 선택: 작성 후 홈으로 이동(원하면 주석 해제)
-            // setTimeout(() => location.href = "/", 500);
+            setTimeout(() => {
+                location.href = "/";
+            }, 400);
 
         } catch (err) {
-            resultBox.textContent = "❌ 네트워크/서버 오류: " + err;
+            setResult("❌ 네트워크/서버 오류: " + err);
+        } finally {
+            setLoading(false);
         }
     });
 </script>
