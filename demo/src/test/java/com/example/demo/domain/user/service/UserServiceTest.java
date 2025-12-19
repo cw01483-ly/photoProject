@@ -4,6 +4,7 @@ import com.example.demo.domain.user.dto.UserLoginRequestDto;
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
+import com.example.demo.global.exception.AuthenticationFailException;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 // 테스트 이름(한글 설명)을 붙일 때 사용하는 어노테이션
@@ -195,7 +196,7 @@ public class UserServiceTest {
 
         // [WHEN & THEN], 틀린 비밀번호 로그인 시도 시 예외 발생
         assertThrows( //assertThrows : 특정 코드 실행 시 [예외 발생해야 한다]는 것을 검증
-                IllegalArgumentException.class, // 예외타입
+                AuthenticationFailException.class, // 예외타입
                         ()-> userService.login(wrongPwLoginRequest)); // 실제 실행할 코드
     }
 
@@ -210,10 +211,10 @@ public class UserServiceTest {
                 .build();
         /* [WHEN & THEN]
             userService.login(request)를 실행할 때
-            IllegalArgumentException 이 발생하면 테스트 성공
+            AuthenticationFailException 이 발생하면 테스트 성공
         */
         assertThrows(
-                IllegalArgumentException.class,
+                AuthenticationFailException.class,
                 () -> userService.login(request));
     }
 

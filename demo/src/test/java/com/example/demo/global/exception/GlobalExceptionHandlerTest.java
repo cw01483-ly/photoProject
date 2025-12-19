@@ -49,7 +49,7 @@ public class GlobalExceptionHandlerTest {
     private UserService userService; // 회원가입 테스트 준비
 
     @Test // ⭐ 비밀번호 불일치 시 에러응답 테스트
-    @DisplayName("로그인 실패 : 비밀번호 불일치 시 400과 에러 응답 반환")
+    @DisplayName("로그인 실패 : 비밀번호 불일치 시 401과 에러 응답 반환")
     void login_fail_wrongPw_returnBadRequest() throws Exception{
 
         // [GIVEN] 1) 정상 회원가입
@@ -82,7 +82,7 @@ public class GlobalExceptionHandlerTest {
         )
                 /* ↓ perform() 결과가 컨트롤러 + 서비스 + 예외처리까지
                      전부 실행한 결과가 아래 조건을 만족하는지 확인*/
-                .andExpect(status().isBadRequest()) // 400 BAD REQUEST 반환해야 함
+                .andExpect(status().isUnauthorized()) // 401 Unauthorized
                 .andExpect(jsonPath("$.success").value(false))
                 /*응답 JSON의 "success" 필드를 꺼내서 false인지 검사
                     "$" = JSON의 루트(root)
