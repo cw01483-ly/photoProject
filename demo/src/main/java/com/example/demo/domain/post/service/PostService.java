@@ -45,6 +45,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     // 게시글 좋아요 정보를 조회하기 위한 리포지토리
     private final FileStorageService fileStorageService;
+    // 이미지 저장/삭제 담당 서비스
 
     // 1. 게시글 생성
     @Transactional // 글생성은 데이터 변경, readOnly=false 트랜잭션 실행
