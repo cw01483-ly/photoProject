@@ -302,13 +302,11 @@ public class PostService {
             throw new IllegalStateException("작성자만 게시글을 삭제할 수 있습니다.");
         }
 
-        /* 7-2) 엔티티의 delete() 메서드 호출
-            - Post.delete() 내부에서 isDeleted=true로 설정
-            - @Where(is_deleted=false)에 의해 이후 조회에서 자동 제외
-            - @SQLDelete와 함께 사용할 경우, 실제 delete(post) 호출과
-              전략을 통일하는 방식도 있으나
-              여기서는 엔티티 비지니스 메서드를 통한 SoftDelete 패턴 사용
-        */
+        // 삭제 전 이미지 파일 같이 삭제
+        String imagePath = post.getImagePath();
+        if (imagePath != null && !imagePath.isBlank()) {
+            fileStorageService.delete(imagePath);
+        }
 
         post.delete();
         // JPA 변경 감지에 의해 트랜잭션 종료시 UPDATE쿼리 실행
