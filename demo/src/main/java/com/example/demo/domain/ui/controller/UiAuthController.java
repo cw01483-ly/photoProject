@@ -1,5 +1,8 @@
 package com.example.demo.domain.ui.controller;
 
+import com.example.demo.domain.user.dto.UserSignupRequestDto;
+import com.example.demo.domain.user.entity.User;
+import com.example.demo.domain.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/ui/auth")
 public class UiAuthController {
 
+    private final UserService  userService;
     private final AuthenticationManager authenticationManager;
 
     @GetMapping("/login") // GET /ui/auth/login
@@ -68,4 +72,24 @@ public class UiAuthController {
         return "redirect:/";
     }
 
+
+    @PostMapping("/signup") // POST /ui/auth/signup
+    public String signup(
+            @RequestParam String username,
+            @RequestParam String nickname,
+            @RequestParam String email,
+            @RequestParam String password
+    ) {
+        UserSignupRequestDto requestDto =
+                UserSignupRequestDto.builder()
+                        .username(username)
+                        .password(password)
+                        .nickname(nickname)
+                        .email(email)
+                        .build();
+
+        userService.register(requestDto);
+
+        return "redirect:/ui/auth/login?signup=success";
+    }
 }
