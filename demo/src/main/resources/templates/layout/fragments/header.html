@@ -1,15 +1,14 @@
-<!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<header th:fragment="header"
+        class="app-header"
+        xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-<header th:fragment="header" class="app-header">
     <div class="app-header__inner">
         <a class="app-logo" th:href="@{/}">PhotoProject</a>
 
         <nav class="app-nav">
             <a class="app-nav__link" th:href="@{/}">Home |</a>
-            <a class="app-nav__link" th:href="@{/ui/demo/posts/write}">Write |</a>
+            <a class="app-nav__link" th:href="@{/ui/posts/write}">Write |</a>
 
             <!-- 로그인 상태 분기: 표준 HttpServletRequest 기반 -->
             <th:block sec:authorize="isAnonymous()"> <!--비로그인-->
@@ -26,7 +25,9 @@
                 <span class="auth-badge auth-badge--jwt">
                     JWT 인증됨
                 </span>
-                <button type="button" onclick="logout()">Logout</button>
+                <form th:action="@{/ui/auth/logout}" method="post" style="display:inline">
+                    <button type="submit">Logout</button>
+                </form>
             </th:block>
         </nav>
     </div>
@@ -41,5 +42,3 @@
         }
     </script>
 </header>
-
-</html>
