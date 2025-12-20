@@ -170,13 +170,19 @@ public class SecurityConfig {
                 )
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
-                        // 에러 페이지는 항상 공개 (무한 redirect 루프 방지)
+                        // 에러 페이지
                         .requestMatchers("/error/**").permitAll()
 
-                        // 정적 리소스,공개 페이지 허용
+                        // 정적 리소스 + 홈
                         .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
 
-                        // 나머지 임시 모두 허용 (추후 강화 계획)
+                        // 인증 관련 UI
+                        .requestMatchers("/ui/auth/**").permitAll()
+
+                        // ⭐ 게시글: 로그인 필수
+                        .requestMatchers("/ui/posts/**").authenticated()
+
+                        // 나머지는 허용
                         .anyRequest().permitAll()
                 )
 
