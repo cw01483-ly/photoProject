@@ -48,7 +48,7 @@ public class UiAuthController {
         request.getSession(true)
                 .setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 
-        return "redirect:/ui/posts";
+        return "redirect:/";
     }
 
     @GetMapping("/signup") // GET /ui/auth/signup
