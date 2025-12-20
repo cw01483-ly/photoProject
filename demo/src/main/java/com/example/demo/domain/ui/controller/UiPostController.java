@@ -67,7 +67,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
             Model model, // 화면에 데이터 전달을 위해 Model 사용
             @AuthenticationPrincipal CustomUserDetails principal
             ) { // 게시글 상세 화면
-        PostDetailResponseDto post = postService.getPostDetail(id); // 상세 데이터 바인딩
+        PostDetailResponseDto post = postService.getPostDetailWithViewIncrease(id); // 상세 데이터 바인딩
         model.addAttribute("post", post);
         model.addAttribute("postId", id); // 화면에서 사용할 수 있도록 postId라는 이름으로 전달
 
@@ -90,7 +90,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         // 2) 다른 유저 수정 차단 (authorId 비교)
         PostDetailResponseDto post = postService.getPostDetail(id);
         if (!post.getAuthorId().equals(principal.getId())) {
-            return "error/403";
+            return "redirect:/error/403";
         }
         model.addAttribute("postId", id); // 화면에서 id 기반으로 기존 데이터 조회/표시할 수 있게 전달
         return "pages/posts/form"; // templates/pages/posts/form.html 로 이동
@@ -112,7 +112,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         // 2) 서버에서 작성자 검증 (DTO의 authorId 사용)
         PostDetailResponseDto post = postService.getPostDetail(id);
         if (!post.getAuthorId().equals(principal.getId())) {
-            return "error/403";
+            return "redirect:/error/403";
         }
 
         // 3) 실제 수정 처리 (PostService 시그니처에 정확히 맞춤)

@@ -28,12 +28,13 @@ import java.util.List;
 /*
     PostService
         1 게시글 생성
-        2 단건 조회 + 조회수 증가 + 게시글 상세 조회 ( 게시글 + 댓글 목록 동시 조회 ) 메서드
-        3 전체 조회 (페이징)
-        4 작성자 기준 조회
-        5 검색 (제목 + 내용)
-        6 게시글 수정 (Update)
-        7 게시글 삭제 (Soft Delete)
+        2 단건 조회 + 조회수 증가 메서드
+        3 게시글 상세 조회 (UI 상세 진입 전용)
+        4 전체 조회 (페이징)
+        5 작성자 기준 조회
+        6 검색 (제목 + 내용)
+        7 게시글 수정 (Update)
+        8 게시글 삭제 (Soft Delete)
 */
 public class PostService {
     private final PostRepository postRepository;
@@ -105,17 +106,28 @@ public class PostService {
         return PostResponseDto.from(post, likeCount);
     }
 
-    @Transactional //조회수 증가 + 댓글 조회 포함 > 데이터 변경
-    public PostDetailResponseDto getPostDetail(Long postId){
-        // 1) 조회수 증가 (게시글 없으면 예외 발생)
+
+    // 3. 게시글 상세 조회 (UI 상세 진입 전용)
+    @Transactional
+    public PostDetailResponseDto getPostDetailWithViewIncrease(Long postId){
+
+        // 1) 조회수 증가 (게시글 없으면 예외)
         int updated = postRepository.increaseViews(postId);
         if (updated == 0){
-            throw new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" +postId);
+            throw new IllegalArgumentException("게시글을 찾을 수  없습니다. id="+postId );
         }
-        // 2)실제 게시글 엔티티 조회 ( softDelete 적용으로 삭제된 글 자동제외 )
+            // 2) 증가 없는 상세 조회 로직 재사용
+            return getPostDetail(postId); // getPostDetail이 조회수 증가를 하지 않으므로 1회만 증가
+    }
+
+
+    // 조회수 증가 없는 상세 데이터 조회 (수정폼/권한검증/내부조회/리다이렉트 후 재조회 등에 사용)
+    public PostDetailResponseDto getPostDetail(Long postId){
+
+        // 1)실제 게시글 엔티티 조회 ( softDelete 적용으로 삭제된 글 자동제외 )
         Post post = postRepository.findById(postId)
                 .orElseThrow(()-> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
-        /* 3) 해당 게시글의 댓글 엔티티 목록 조회
+        /* 2) 해당 게시글의 댓글 엔티티 목록 조회
                 페이징을 사용하여 "최신 10개"만 조회
                 + Page 객체를 통해 전체 댓글 개수도 함께 가져옴
             - Comment 엔티티에 @Where 적용으로 논리 삭제된 댓글은 자동 제외
@@ -140,7 +152,7 @@ public class PostService {
         // 전체 댓글 개수 (삭제되지 않은 댓글 기준)
         long totalCommentsCount = commentPage.getTotalElements();
 
-        /* 4) 댓글 엔티티 목록 -> 댓글 응답 DTO 목록으로 변환
+        /* 3) 댓글 엔티티 목록 -> 댓글 응답 DTO 목록으로 변환
             - CommentResponseDto.from(comment)을 각 댓글에 적용하여
               화면에 내려줄 형태(List<CommentResponseDto>)로 변환
             - 여기서는 "최신 10개"만 변환
@@ -152,10 +164,10 @@ public class PostService {
         // 실제로 내려가는 최신 댓글 개수 (10개 또는 그 이하)
         int latestCommentsSize = commentDtoList.size();
 
-        // 5) 해당 게시글의 Like 수 조회
+        // 4) 해당 게시글의 Like 수 조회
         long likeCount = postLikeRepository.countByPostId(postId);
 
-        /* 6) PostDetailResponseDto 로 통합 응답 생성
+        /* 5) PostDetailResponseDto 로 통합 응답 생성
          - Post 엔티티 + 댓글 DTO 목록을 하나의 응답 객체로 묶어서 반환
          - 이번에는
             * 최신 댓글 10개 (latestComments)
@@ -174,16 +186,16 @@ public class PostService {
     }
 
 
-    // 3. 최신 게시글 전체 조회 (페이징)
+    // 4. 최신 게시글 전체 조회 (페이징)
     public Page<PostResponseDto> getPosts(Pageable pageable){
 
-        /* 3-1) 게시글 목록 조회
+        /* 4-1) 게시글 목록 조회
              - Post_id 기준 내림차순(최신글이 위로)
              - Pageable을 통해 page, size, sort 지정 가능
         */
         Page<Post> posts = postRepository.findByOrderByIdDesc(pageable);
 
-        // 3-2) Page<Post> -> Page<PostResponseDto> 변환해서 반환
+        // 4-2) Page<Post> -> Page<PostResponseDto> 변환해서 반환
         // + 각 게시글 좋아요 수를 조회 하고 DTO에 함께 담아줌
         return posts.map(post -> {
             long likeCount = postLikeRepository.countByPostId(post.getId()); // 게시글별 LIKE
@@ -191,28 +203,28 @@ public class PostService {
         });
     }
 
-    // 4. 작성자 기준 게시글 조회 (페이징)
+    // 5. 작성자 기준 게시글 조회 (페이징)
     public Page<PostResponseDto> getPostsByAuthor(Long authorId, Pageable pageable){
 
-        // 4-1) 작성자 ID(authorId) 기준 게시글 목록 페이징 조회
+        // 5-1) 작성자 ID(authorId) 기준 게시글 목록 페이징 조회
         Page<Post> posts = postRepository.findByAuthorId(authorId,pageable);
 
-        // 4-2) DTO로 변환 후 반환 + 게시글 별 LIKE 수 포함
+        // 5-2) DTO로 변환 후 반환 + 게시글 별 LIKE 수 포함
         return posts.map(post -> {
             long likeCount = postLikeRepository.countByPostId(post.getId()); // 게시글 LIKE 수 조회
             return PostResponseDto.from(post, likeCount);
         });
     }
 
-    // 5. 제목 + 내용 키워드 검색 (IgnoreCase, 페이징)
+    // 6. 제목 + 내용 키워드 검색 (IgnoreCase, 페이징)
     public Page<PostResponseDto> searchPosts(String keyword, Pageable pageable){
 
-        // 5-1) keyword가 제목or내용에 포함된 글 검색
+        // 6-1) keyword가 제목or내용에 포함된 글 검색
         Page<Post> posts = postRepository
                 .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
                         keyword, keyword, pageable
                 );
-        // 5-2) DTO로 변환 후 반환 + 게시글별 LIKE 수 포함하도록 람다식 변환
+        // 6-2) DTO로 변환 후 반환 + 게시글별 LIKE 수 포함하도록 람다식 변환
         return posts.map(post -> {
               long likeCount = postLikeRepository.countByPostId(post.getId());
               return PostResponseDto.from(post, likeCount);
@@ -226,9 +238,9 @@ public class PostService {
             Page<PostResponseDto> 로 만들어서 반환해라.”*/
     }
 
-    // 6. 게시글 수정 -> 수정을 위해 별도 트랜잭션 필요
+    // 7. 게시글 수정 -> 수정을 위해 별도 트랜잭션 필요
     @Transactional
-    /* 6-1) 수정 게시글 조회
+    /* 7-1) 수정 게시글 조회
         - 게시글 없으면 예외
         - softDelete 적용으로 삭제된 글 조회 X
     */
@@ -242,13 +254,13 @@ public class PostService {
             throw new IllegalStateException("작성자만 게시글을 수정할 수 있습니다.");
         }
 
-        /* 6-2) 엔티티의 비지니스 메서드 사용하여 제목/내용 수정
+        /* 7-2) 엔티티의 비지니스 메서드 사용하여 제목/내용 수정
             - Post.update(title,content) 내부에서 null,공백 체크 + trim 처리
             - JPA 변경 감지(Dirty Checking)에 의해 트랜잭션 종료시 자동으로 UPDATE 쿼리 실행
         */
         post.update(title,content);
 
-        // 6-3) 수정된 엔티티를 DTO 변환 후 반환 + 수정 후 게시글 LIKE 수도 함께 전달
+        // 7-3) 수정된 엔티티를 DTO 변환 후 반환 + 수정 후 게시글 LIKE 수도 함께 전달
         long likeCount = postLikeRepository.countByPostId(postId);
         return PostResponseDto.from(post, likeCount);
     }
@@ -287,10 +299,10 @@ public class PostService {
         return PostResponseDto.from(post, likeCount);
     }
 
-    // 7. 게시글 삭제 ( Soft Delete )
+    // 8. 게시글 삭제 ( Soft Delete )
     @Transactional
     public void deletePost(Long postId, Long userId){
-        /* 7-1) 삭제할 게시글 조회
+        /* 8-1) 삭제할 게시글 조회
             - softDelete 적용(@Where is_deleted=false)
             - 이미 삭제된 글(is_deleted=true)은 조회 X
         */
