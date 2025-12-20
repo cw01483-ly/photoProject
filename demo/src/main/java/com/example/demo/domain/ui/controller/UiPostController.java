@@ -122,4 +122,28 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         return "redirect:/ui/posts/" + id;
     }
 
+    // 게시글 삭제: POST /ui/posts/{id}/delete
+    @PostMapping("/{id}/delete")
+    public String deletePostFromUi(
+            @PathVariable("id") Long id,
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        // 1) 비로그인 차단
+        if (principal == null) {
+            return "redirect:/ui/auth/login?next=/ui/posts/" + id;
+        }
+
+        // 2) 작성자 검증 (서버에서도 다시 검사)
+        PostDetailResponseDto post = postService.getPostDetail(id);
+        if (!post.getAuthorId().equals(principal.getId())) {
+            return "error/403";
+        }
+
+        // 3) 삭제 처리
+        postService.deletePost(id, principal.getId());
+
+        // 4) 목록으로 이동
+        return "redirect:/ui/posts";
+    }
+
 }
