@@ -29,8 +29,7 @@
             <p>
                 로그인 상태: <strong th:text="${username}">username</strong>
             </p>
-        <!--JWT 로그아웃-->
-            <button type="button" onclick="logout()">로그아웃</button>
+
         </div>
         <!--비로그인 상태-->
         <div th:unless="${isLogin}">
@@ -79,15 +78,7 @@
             화면은 기능 검증을 위한 최소 UI로 구성되어 있습니다.
         </p>
     </section>
-    <!--JWT 로그아웃 스크립트-->
-    <script>
-        function logout() {
-            fetch("/api/auth/logout",{
-                method: "POST",
-                credentials: "include"
-            }).then(() => location.reload());
-        }
-    </script>
+
 </section>
 
 </html>

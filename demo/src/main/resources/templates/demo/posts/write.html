@@ -28,7 +28,13 @@
     <section class="card signup-card">
 
 
-        <form id="demoWriteForm" class="form" novalidate>
+        <form
+                id="demoWriteForm"
+                class="form"
+                method="post"
+                th:action="@{/ui/posts}"
+                novalidate
+        >
 
             <fieldset class="form-fieldset">
                 <legend class="form-legend">게시글 정보</legend>
@@ -78,10 +84,7 @@
                             accept="image/*"
                             disabled
                     >
-                    <small class="form-help">
-                        Demo UI는 JSON 기반 게시글 생성 API를 검증하므로
-                        이미지 업로드 multipart는 사용하지 않습니다.
-                    </small>
+
                 </div>
 
                 <!-- 결과 메시지 표시 영역(성공/실패) -->
@@ -105,79 +108,6 @@
     </section>
 </main>
 
-<script>
-    // Demo 글쓰기: fetch("/api/posts") + JSON + credentials:"include"
-    const formEl = document.getElementById("demoWriteForm");
-    const resultBox = document.getElementById("resultBox");
-    const submitBtn = document.getElementById("submitBtn");
-
-    function setResult(text) {
-        resultBox.textContent = text;
-    }
-
-    function setLoading(isLoading) {
-        submitBtn.disabled = isLoading;
-        submitBtn.textContent = isLoading ? "처리중..." : "등록";
-    }
-
-    async function handleErrorResponse(res) {
-        if (res.status === 401) {
-            setResult("❌ 로그인 필요: 로그인 후 다시 시도하세요.");
-            return;
-        }
-        if (res.status === 403) {
-            setResult("❌ 권한 없음(403)");
-            return;
-        }
-
-        try {
-            const text = await res.text();
-            setResult("❌ 작성 실패(" + res.status + "): " + text);
-        } catch (e) {
-            setResult("❌ 작성 실패(" + res.status + ")");
-        }
-    }
-
-    formEl.addEventListener("submit", async (e) => {
-        e.preventDefault(); // 기본 submit 차단
-
-        setResult("");
-        setLoading(true);
-
-        const title = document.getElementById("title").value;
-        const content = document.getElementById("content").value;
-
-        try {
-            const res = await fetch("/api/posts", {
-                method: "POST",
-                credentials: "include", // JWT(HttpOnly 쿠키) 포함
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    title: title,
-                    content: content
-                })
-            });
-
-            if (!res.ok) {
-                await handleErrorResponse(res);
-                return;
-            }
-
-            setResult("⭕ 작성 성공! (JSON 기반 게시글 생성 API 검증 완료)");
-
-            setTimeout(() => {
-                location.href = "/";
-            }, 400);
-
-        } catch (err) {
-            setResult("❌ 네트워크/서버 오류: " + err);
-        } finally {
-            setLoading(false);
-        }
-    });
-</script>
 
 </body>
 </html>

@@ -29,14 +29,4 @@
             </th:block>
         </nav>
     </div>
-
-    <!-- JWT 로그아웃 스크립트 -->
-    <script>
-        function logout() {
-            fetch("/api/auth/logout", {
-                method: "POST",
-                credentials: "include"
-            }).then(() => location.reload());
-        }
-    </script>
 </header>
