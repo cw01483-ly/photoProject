@@ -24,6 +24,11 @@
         </p>
     </section>
 
+
+    <div th:if="${param.error}" class="alert alert-error">
+        ❌ 아이디 또는 비밀번호가 올바르지 않습니다.
+    </div>
+
     <!-- 로그인 카드 -->
     <section class="card signup-card">
 

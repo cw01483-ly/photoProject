@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.core.AuthenticationException; // 인증 실패 예외
 import org.springframework.stereotype.Controller; // UI 컨트롤러
 import org.springframework.web.bind.annotation.GetMapping; // GET 매핑
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
@@ -36,8 +37,12 @@ public class UiAuthController {
             @RequestParam String password,
             HttpServletRequest request
     ) {
+        // username 정규화: API(UserService.login)과 동일 정책(소문자+trim)
+        String normalizedUsername = (username == null) ? null : username.trim().toLowerCase();
+
+        try{
         UsernamePasswordAuthenticationToken token =
-                new UsernamePasswordAuthenticationToken(username, password);
+                new UsernamePasswordAuthenticationToken(normalizedUsername, password);
 
         Authentication authentication =
                 authenticationManager.authenticate(token);
@@ -49,6 +54,10 @@ public class UiAuthController {
                 .setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 
         return "redirect:/";
+        }catch (AuthenticationException e){
+            // 로그인 실패 시 500이 아닌 정상 실패 처리
+            return "redirect:/ui/auth/login?error=true";
+        }
     }
 
     @GetMapping("/signup") // GET /ui/auth/signup

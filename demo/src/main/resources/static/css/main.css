@@ -302,3 +302,20 @@ h2 {
 .app-nav__form {
     margin: 0;
 }
+
+/*로그인 실패 메시지*/
+.alert {
+    margin: 14px auto;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border: 1px solid transparent;
+    max-width: 520px;
+}
+
+.alert-error {
+    background: #fff4f4;
+    border-color: #ffd1d1;
+    color: #b42318;
+}
