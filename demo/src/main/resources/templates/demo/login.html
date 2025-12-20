@@ -24,10 +24,19 @@
         </p>
     </section>
 
+    <!-- 로그인 실패 메시지 표시 -->
+    <div th:if="${param.error}" class="alert alert-error">
+        ❌ 아이디 또는 비밀번호가 올바르지 않습니다.
+    </div>
+
     <!-- 로그인 카드 -->
     <section class="card signup-card">
 
-        <form id="demoLoginForm" class="form" novalidate>
+        <form id="demoLoginForm"
+              class="form"
+              method="post"
+              th:action="@{/ui/auth/login}"
+              novalidate>
 
             <!-- 필드 그룹 -->
             <fieldset class="form-fieldset">
@@ -85,40 +94,6 @@
         </form>
     </section>
 </main>
-
-
-<script>
-    document.getElementById("demoLoginForm").addEventListener("submit", async (e) => {
-        e.preventDefault(); // 폼 기본 submit(페이지 이동) 막기
-
-        const username = document.getElementById("username").value;
-        const password = document.getElementById("password").value;
-
-        const res = await fetch("/api/users/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include", //JWT HttpOnly 쿠키 저장/전송
-            body: JSON.stringify({ username, password })
-        });
-
-        const text = await res.text();
-        let data = null;
-        try { data = JSON.parse(text); } catch (e) {}
-
-        if (res.ok) {
-            alert("로그인 성공! (JWT는 HttpOnly 쿠키라 JS에서 직접 확인 불가)");
-            window.location.href = "/"; // 홈으로 이동
-            return;
-        }
-
-        // ApiResponse 형식이면 message가 있을 가능성이 큼
-        if (data && data.message) {
-            alert("로그인 실패: " + data.message);
-        } else {
-            alert("로그인 실패: " + text);
-        }
-    });
-</script>
 
 </body>
 </html>

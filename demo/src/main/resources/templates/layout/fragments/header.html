@@ -20,11 +20,9 @@
 
             <th:block sec:authorize="isAuthenticated()"> <!--로그인 상태-->
                 <span class="app-nav__text">
-                      반갑습니다, <span sec:authentication="name"></span>님!
+                      반갑습니다, <span sec:authentication="name"></span> 님!
                 </span>
-                <span class="auth-badge auth-badge--jwt">
-                    JWT 인증됨
-                </span>
+
                 <form th:action="@{/ui/auth/logout}" method="post" style="display:inline">
                     <button type="submit">Logout</button>
                 </form>
