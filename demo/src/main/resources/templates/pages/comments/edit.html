@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>댓글 수정 | PhotoProject</title>
+
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+
+<body>
+
+<!-- 공통 헤더 -->
+<div th:replace="layout/fragments/header :: header"></div>
+
+<main class="container">
+
+    <section class="card">
+
+        <div style="display:flex; justify-content:flex-end;">
+            <a class="btn btn-ghost"
+               th:href="@{/ui/posts/{id}(id=${postId})}">
+                돌아가기
+            </a>
+        </div>
+
+        <hr style="border:none; border-top:1px solid #eee; margin:16px 0;">
+
+        <h2>댓글 수정</h2>
+
+        <!-- 댓글 수정 폼 -->
+        <form th:action="@{/ui/comments/{commentId}/edit(commentId=${commentId})}"
+              method="post">
+
+            <!-- 게시글 ID 유지 -->
+            <input type="hidden" name="postId" th:value="${postId}">
+
+            <textarea
+                    name="content"
+                    rows="5"
+                    required
+                    style="width:100%; resize:vertical;"
+                    th:text="${comment.content}">
+            </textarea>
+
+            <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+                <button type="submit" class="btn btn-primary">
+                    수정 저장
+                </button>
+                <a class="btn btn-ghost"
+                   th:href="@{/ui/posts/{id}(id=${postId})}">
+                    취소
+                </a>
+            </div>
+
+        </form>
+
+    </section>
+
+</main>
+
+</body>
+</html>
