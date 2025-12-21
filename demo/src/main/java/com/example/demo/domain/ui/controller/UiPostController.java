@@ -32,8 +32,13 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         ){ // 게시글 목록 화면
             Page<PostResponseDto> page = postService.getPosts(pageable); // 실 게시글 목록
 
+            long totalElements = page.getTotalElements(); // 화면용 시작 번호 (역순 정렬)
+            long startNumber =
+                    totalElements - (long) page.getNumber() * page.getSize();
+
             model.addAttribute("page", page); // 페이지 정보
             model.addAttribute("posts", page.getContent()); // 화면에서 th:each로 돌릴 실제 목록
+            model.addAttribute("startNumber", startNumber);
             return "pages/posts/list"; // templates/pages/posts/list.html 로 이동
         }
 

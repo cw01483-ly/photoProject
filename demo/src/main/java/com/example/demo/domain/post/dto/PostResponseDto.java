@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class PostResponseDto {
 
     private Long id; // 게시글ID
+    private Long displayNumber;
     private String title;
     private String content;
     private int views; //조회수
@@ -34,6 +35,7 @@ public class PostResponseDto {
     public static PostResponseDto from(Post post, long likeCount){
         return PostResponseDto.builder()
                 .id(post.getId())
+                .displayNumber(post.getDisplayNumber())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .views(post.getViews())

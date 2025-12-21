@@ -111,7 +111,7 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 - 조회 시 실행 쿼리 수 감소
 - 응답 시간 개선 확인
 
-👉 **[상세 분석 문서 보기](docs/case-n-plus-one.md)**
+👉 **[상세 분석 문서 보기](docs/4-1case-n-plus-one.md)**
 
 ---
 
