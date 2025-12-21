@@ -4,6 +4,7 @@ import com.example.demo.domain.comment.dto.CommentResponseDto;
 import com.example.demo.domain.comment.entity.Comment;
 import com.example.demo.domain.comment.repository.CommentRepository;
 import com.example.demo.domain.post.dto.PostDetailResponseDto;
+import com.example.demo.domain.post.dto.PostListResponseDto;
 import com.example.demo.domain.post.dto.PostResponseDto;
 import com.example.demo.domain.post.entity.Post;
 import com.example.demo.domain.post.repository.PostLikeRepository;
@@ -187,20 +188,15 @@ public class PostService {
 
 
     // 4. 최신 게시글 전체 조회 (페이징)
-    public Page<PostResponseDto> getPosts(Pageable pageable){
+    public Page<PostListResponseDto> getPosts(Pageable pageable){
 
         /* 4-1) 게시글 목록 조회
              - Post_id 기준 내림차순(최신글이 위로)
              - Pageable을 통해 page, size, sort 지정 가능
+             - Repository에서 JOIN + GROUP BY 로 PostListResponseDto를 직접 조회
         */
-        Page<Post> posts = postRepository.findByOrderByIdDesc(pageable);
+        return postRepository.findPostListWithLikeCount(pageable);
 
-        // 4-2) Page<Post> -> Page<PostResponseDto> 변환해서 반환
-        // + 각 게시글 좋아요 수를 조회 하고 DTO에 함께 담아줌
-        return posts.map(post -> {
-            long likeCount = postLikeRepository.countByPostId(post.getId()); // 게시글별 LIKE
-            return PostResponseDto.from(post, likeCount); // LIKE 수 포함 DTO 변환
-        });
     }
 
     // 5. 작성자 기준 게시글 조회 (페이징)

@@ -1,5 +1,6 @@
 package com.example.demo.domain.post.repository;
 
+import com.example.demo.domain.post.dto.PostListResponseDto;
 import com.example.demo.domain.post.entity.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,5 +57,29 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     // 6) 삭제여부 무시하고 단건조회(관리자용, @Where 우회)
     @Query(value = "select * from posts where id = :id", nativeQuery = true)
     Optional<Post> findRawById(@Param("id") Long id);
+
+    // 7) [case4-1] 목록 조회 전용 DTO ( N+1  제거 목적 )
+    @Query(
+            value =
+                    "select new com.example.demo.domain.post.dto.PostListResponseDto(" +
+                            " p.id, " +
+                            " p.displayNumber, " +
+                            " p.title, " +
+                            " p.content, " +
+                            " p.views, " +
+                            " a.nickname, " +
+                            " p.createdAt, " +
+                            " p.updatedAt, " +
+                            " coalesce(count(pl.id), 0L) " +
+                            ") "+
+                    "from Post p " +
+                    "join p.author a " +
+                    "left join com.example.demo.domain.post.entity.PostLike pl on pl.post = p " +
+                    "group by " +
+                            " p.id, p.displayNumber, p.title, p.content, p.views, a.nickname, p.createdAt, p.updatedAt " +
+                    "order by p.id desc",
+            countQuery = "select count(p) from Post p"
+    )
+    Page<PostListResponseDto> findPostListWithLikeCount(Pageable pageable);
 
 }

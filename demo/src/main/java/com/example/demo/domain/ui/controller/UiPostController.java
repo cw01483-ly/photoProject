@@ -1,6 +1,7 @@
 package com.example.demo.domain.ui.controller; // UI(Thymeleaf) 전용 컨트롤러 패키지
 
 import com.example.demo.domain.post.dto.PostDetailResponseDto;
+import com.example.demo.domain.post.dto.PostListResponseDto;
 import com.example.demo.domain.post.dto.PostResponseDto;
 import com.example.demo.domain.post.service.PostService;
 import com.example.demo.global.security.CustomUserDetails;
@@ -30,7 +31,7 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC)Pageable pageable,
         Model model
         ){ // 게시글 목록 화면
-            Page<PostResponseDto> page = postService.getPosts(pageable); // 실 게시글 목록
+            Page<PostListResponseDto> page = postService.getPosts(pageable); // 실 게시글 목록
 
             long totalElements = page.getTotalElements(); // 화면용 시작 번호 (역순 정렬)
             long startNumber =

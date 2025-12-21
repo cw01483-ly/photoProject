@@ -1,8 +1,5 @@
 package com.example.demo.domain.post.controller;
-import com.example.demo.domain.post.dto.PostCreateRequestDto;
-import com.example.demo.domain.post.dto.PostLikeCountResponseDto;
-import com.example.demo.domain.post.dto.PostLikeToggleResponseDto;
-import com.example.demo.domain.post.dto.PostResponseDto;
+import com.example.demo.domain.post.dto.*;
 import com.example.demo.domain.post.service.PostLikeService;
 import com.example.demo.domain.post.service.PostService;
 import com.example.demo.global.response.ApiResponse;
@@ -88,13 +85,13 @@ public class PostController {
     @GetMapping
     // HTTP GET /posts 요청을 이 메서드가 처리
     // 쿼리 파라미터로 page, size, sort를 자동으로 Pageable에 매핑
-    public ResponseEntity<ApiResponse<Page<PostResponseDto>>> getPosts(Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<PostListResponseDto>>> getPosts(Pageable pageable) {
         // 스프링이 page, size, sort 쿼리 파라미터를 분석해서 Pageable 객체를 자동 생성
         // 예: /posts?page=0&size=5&sort=id,desc
 
         // PostService의 getPosts 호출
         // Page<PostResponseDto> 형태로 페이징된 결과를 받음
-        Page<PostResponseDto> responsePage = postService.getPosts(pageable);
+        Page<PostListResponseDto> responsePage = postService.getPosts(pageable);
 
         // 200 OK + 페이징된 게시글 목록 반환
         return ResponseEntity.ok( // HTTP 200 OK 응답 생성
