@@ -131,6 +131,13 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 
 👉 **[상세 분석 문서 보기](docs/4-2case-concurrency-like.md)**
 
+[^memo]: [README 최종 수정 시 반영 예정 메모]
+        - 4-2 핵심 키워드:
+            - Race Condition
+            - DB Source of Truth
+            - UNIQUE INDEX
+            - 예외 제거 x / 기준 설정 o
+
 ---
 
 ### 4-3. 인증·인가 예외 처리 흐름 개선

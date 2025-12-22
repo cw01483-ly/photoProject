@@ -9,8 +9,8 @@
 ## 1. Before 시나리오 A: 게시글 목록 조회
 
 ### 1-1. 요청 정보
-- Method: GET
-- Endpoint: /api/posts?page=0&size=10&sort=id,desc
+- Method: `GET`
+- Endpoint: `/api/posts?page=0&size=10&sort=id,desc`
 - 요청 목적: 게시글 목록 조회
 
 ### 1-2. Postman 요청/응답 결과
@@ -37,8 +37,8 @@
 ## 2. Before 시나리오 B: 게시글 상세 조회
 
 ### 2-1. 요청 정보
-- Method: GET
-- Endpoint: /api/posts/{postId}
+- Method: `GET`
+- Endpoint: `/api/posts/{postId}`
 - 요청 목적: 게시글 단건 상세 조회
 
 ### 2-2. Postman 요청/응답 결과
@@ -79,8 +79,8 @@
 ## 5. After 시나리오 A: 게시글 목록 조회 (개선 후 재검증)
 
 ### 5-1. 요청 정보
-- Method: GET
-- Endpoint: /api/posts?page=0&size=10&sort=id,desc
+- Method: `GET`
+- Endpoint: `/api/posts?page=0&size=10&sort=id,desc`
 - 요청 목적: 게시글 목록 조회
 
 ### 5-2. Postman 요청/응답 결과
