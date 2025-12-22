@@ -7,8 +7,10 @@ import com.example.demo.domain.post.repository.PostRepository;
 import com.example.demo.domain.user.entity.User;
 import com.example.demo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException; // UNIQUE 충돌 예외 흡수
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.orm.ObjectOptimisticLockingFailureException; // 동시 삭제/갱신 충돌 예외
 
 /*
     PostLikeService
@@ -31,6 +33,10 @@ public class PostLikeService {
         좋아요 토글 메서드
         - 이미 해당 user가 해당 post에 좋아요를 눌렀다면 -> 좋아요 취소(삭제)
         - 아직 누르지 않았다면 -> 좋아요 추가(생성)
+        - 동시 요청(Concurrency) 상황에서,
+            insert 중복(UNIQUE충돌) 또는 delete경합 같은 예외가 발생할 수 있으므로
+            메서드는 예외를 "실패"로 두지 않고 흡수 후 DB 최종 상태(exists)를 재조회하여 liked값 결정
+
         - 반환값(boolean) 의미:
             true  : 현재 호출 결과, "좋아요가 눌려진 상태"가 됨
             false : 현재 호출 결과, "좋아요가 취소된 상태"가 됨
@@ -45,25 +51,38 @@ public class PostLikeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. id=" + userId));
 
-        // 3) 기존에 좋아요가 있는지 조회
-        return postLikeRepository.findByPostIdAndUserId(postId, userId)
-                .map(existingLike -> {
-                    // 3-1) 이미 좋아요가 존재하는 경우 -> 삭제(좋아요 취소)
-                    postLikeRepository.delete(existingLike); // 엔티티 삭제
-                    // 현재 상태는 "좋아요가 취소된 상태"이므로 false 반환
-                    return false;
-                })
-                .orElseGet(() -> {
-                    // 3-2) 좋아요가 아직 없는 경우 -> 새로 생성(좋아요 추가)
-                    PostLike newLike = PostLike.builder()
-                            .post(post) // 어떤 게시글에 대한 좋아요인지 설정
-                            .user(user) // 어떤 사용자가 누른 좋아요인지 설정
-                            .build();
+        // 존재 여부(exists)로 분기 후 "쿼리 삭제"를 수행
+        boolean exists = postLikeRepository.existsByPostIdAndUserId(postId, userId); // 분기 기준
 
-                    postLikeRepository.save(newLike); // DB에 저장
-                    // 현재 상태는 "좋아요가 눌려진 상태"이므로 true 반환
-                    return true;
-                });
+        if (exists) {
+            // 좋아요가 이미 있으면 -> 쿼리 삭제로 취소
+            try {
+                postLikeRepository.deleteByPostIdAndUserId(postId, userId);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                // 동시성 상황: 다른 트랜잭션이 먼저 삭제했을 수 있음
+                // 이미 취소된 것으로 간주하고 계속 진행
+            } catch (Exception e) {
+                // 예상 밖 예외도 동시성 케이스에서는 "취소 시도" 단계에서 흡수
+            }
+            // 최종 상태를 DB 기준으로 확정해서 반환
+            return postLikeRepository.existsByPostIdAndUserId(postId, userId);
+        }
+        // exists == false 인 경우: 좋아요 추가 시도
+        PostLike newLike = PostLike.builder()
+                .post(post)
+                .user(user)
+                .build();
+
+        try {
+            postLikeRepository.save(newLike);
+        } catch (DataIntegrityViolationException e) {
+            // 동시성 상황: 다른 트랜잭션이 먼저 insert 했을 수 있음
+            // 이미 좋아요 된 것으로 간주하고 계속 진행
+        } catch (Exception e) {
+            // 하이버네이트 세션/엔티티 상태 꼬임을 포함한 예상 밖 예외도 흡수
+        }
+        // 최종 상태를 DB 기준으로 확정해서 반환
+        return postLikeRepository.existsByPostIdAndUserId(postId, userId);
     }
 
     /*
@@ -72,10 +91,6 @@ public class PostLikeService {
         - 단순히 Repository의 countByPostId를 감싸는 래퍼 메서드
      */
     public long getLikeCount(Long postId) {
-        // 게시글 존재 여부를 엄격히 체크하고 싶다면 아래 주석 해제 가능
-        // postRepository.findById(postId)
-        //         .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. id=" + postId));
-
         return postLikeRepository.countByPostId(postId); // postId 기준으로 좋아요 개수 카운트
     }
 

@@ -2,6 +2,9 @@ package com.example.demo.domain.post.repository;
 
 import com.example.demo.domain.post.entity.PostLike;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 /*
@@ -32,4 +35,14 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
      */
     long countByPostId(Long postId);
 
+
+    /*
+        deleteByPostIdAndUserId
+        - 동시성 상황에서 엔티티를 가져와 삭제하는 방식은
+            영속성 컨텍스트 상태가 꼬일 수 있으므로,
+            (postId, UserId) 조건으로 DB에 바로 delete 쿼리 실행, 반환값 int
+    */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from PostLike pl where pl.post.id = :postId and pl.user.id = :userId")
+    int deleteByPostIdAndUserId(@Param("postId") Long postId, @Param("userId") Long userId);
 }
