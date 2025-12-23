@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.global.file.FileStorageService;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 
@@ -247,7 +248,7 @@ public class PostService {
 
         // 작성자 검증
         if (!post.getAuthor().getId().equals(userId)){
-            throw new IllegalStateException("작성자만 게시글을 수정할 수 있습니다.");
+            throw new AccessDeniedException("작성자만 게시글을 수정할 수 있습니다.");
         }
 
         /* 7-2) 엔티티의 비지니스 메서드 사용하여 제목/내용 수정
@@ -270,7 +271,7 @@ public class PostService {
 
         // 작성자 검증
         if (!post.getAuthor().getId().equals(userId)){
-            throw new IllegalStateException("작성자만 게시글을 수정할 수 있습니다.");
+            throw new AccessDeniedException("작성자만 게시글을 수정할 수 있습니다.");
         }
 
         // 1) 제목/내용 수정
@@ -307,7 +308,7 @@ public class PostService {
 
         // 작성자 검증
         if (!post.getAuthor().getId().equals(userId)){
-            throw new IllegalStateException("작성자만 게시글을 삭제할 수 있습니다.");
+            throw new AccessDeniedException("작성자만 게시글을 삭제할 수 있습니다.");
         }
 
         // 삭제 전 이미지 파일 같이 삭제
