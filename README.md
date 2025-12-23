@@ -111,7 +111,7 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 - 조회 시 실행 쿼리 수 감소
 - 응답 시간 개선 확인
 
-👉 **[상세 분석 문서 보기](docs/4-1case-n-plus-one.md)**
+👉 **[상세 분석 문서 보기](demo/docs/4-1case-n-plus-one.md)**
 
 ---
 
@@ -129,7 +129,7 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 - 동시 요청 상황에서 중복 데이터 미발생 확인
 - 정합성 유지 여부 검증
 
-👉 **[상세 분석 문서 보기](docs/4-2case-concurrency-like.md)**
+👉 **[상세 분석 문서 보기](demo/docs/4-2case-concurrency-like.md)**
 
 [^memo]: [README 최종 수정 시 반영 예정 메모]
         - 4-2 핵심 키워드:
@@ -154,4 +154,4 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 - 인증 실패 시 응답 형식 일관성 확보
 - 예외 처리 흐름 단순화
 
-👉 **[상세 분석 문서 보기](docs/4-3case-auth-exception.md)**
+👉 **[상세 분석 문서 보기](demo/docs/4-3case-Authentication&Authorization.md)**
