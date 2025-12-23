@@ -183,4 +183,4 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 프로젝트 운영 관점에서 추가로 검증한 보조 실험 및 참고 자료를 정리한 영역입니다.
 
 - 조회 데이터 증가 상황에서 페이징(size) 옵션이 실제 DB 조회 범위(limit)에 반영되는지 검증  
-  👉 [페이징 처리 부록 문서](demo/docs/5-appendix-pagination.md)
+  👉 [페이징 처리 부록 문서](demo/docs/5-1appendix-pagination.md)
