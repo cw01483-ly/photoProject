@@ -179,8 +179,8 @@ PhotoProject는 도메인(User / Post / Comment) 단위로 기능을 분리하�
 
 ## 5. Appendix
 
-본 섹션은 Case Study로 다루지는 않았지만,  
-프로젝트 운영 관점에서 추가로 관찰한 실험 및 참고 자료를 정리합니다.
+본 섹션은 본편 Case Study 외에,  
+프로젝트 운영 관점에서 추가로 검증한 보조 실험 및 참고 자료를 정리한 영역입니다.
 
-- 조회 데이터 증가 상황에서의 페이징 동작 확인:  
-  👉 [페이징 처리 부록 문서](demo/docs/5-1appendix-pagination.md)
+- 조회 데이터 증가 상황에서 페이징(size) 옵션이 실제 DB 조회 범위(limit)에 반영되는지 검증  
+  👉 [페이징 처리 부록 문서](demo/docs/5-appendix-pagination.md)
