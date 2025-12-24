@@ -13,8 +13,6 @@ import org.hibernate.annotations.Where;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 // JPA프록시 생성을 위한 기본 생성자, 외부에서 호출 불가.
-@AllArgsConstructor //모든 필드를 인자로 받는 생성자 자동 생성
-@Builder
 @ToString(exclude = "author") //author필드를 출력에서 제외(순환 참조 방지)
 // author는 @ManyToOne관계(지연로딩) > 예기치 않은 DB호출로 성능저하, 재귀순환문제 생기는것을 예방
 @EqualsAndHashCode(of = "id") // id 필드만으로 동일성 비교 (엔티티 루프 방지)
@@ -79,13 +77,11 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
 
     //조회수 카운트
     @Column(nullable = false)
-    @Builder.Default // @Builder 사용 시 기본 초기값(views=0)을 유지하려면 @Builder.Default가 필요함(int는 null이 아님)
-    private int views=0; //조회수의 처음값 0
+    private int views; //조회수의 처음값 0
 
     //논리 삭제 여부(false - 정상, true = 삭제)
     @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
-    private boolean isDeleted=false;
+    private boolean isDeleted;
 
     // 게시글 이미지 경로(URL 또는 파일 경로)
     @Column(name = "image_path")
@@ -128,4 +124,20 @@ public class Post extends BaseTimeEntity { //BaseTimeEntity를 상속하여 시�
         this.imagePath = imagePath;
     }
 
+    // 필요한 생성자에만 @Builder 적용
+    @Builder
+    private Post(
+            String title,
+            String content,
+            User author,
+            Long displayNumber,
+            String imagePath){
+        this.title = title;
+        this.content = content;
+        this.author = author;
+        this.displayNumber = displayNumber;
+        this.imagePath = imagePath;
+        this.views = 0;
+        this.isDeleted = false;
+    }
 }

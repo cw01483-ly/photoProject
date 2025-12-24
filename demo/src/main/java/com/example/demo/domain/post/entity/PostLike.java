@@ -13,8 +13,6 @@ import lombok.*;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA 프록시 생성을 위한 기본 생성자
-@AllArgsConstructor // 모든 필드를 매개변수로 받는 생성자 자동 생성
-@Builder
 @Table(
         name = "post_likes", // 실제 DB 테이블 이름 지정
         uniqueConstraints = {
@@ -58,13 +56,11 @@ public class PostLike extends BaseTimeEntity {
         - 엔티티 내부에서 의미 있는 도메인 동작을 메서드로 묶어두는 곳
      */
 
-    // 연관관계를 설정하는 편의 메서드 (필요 시 사용)
-    public void setPost(Post post) {
-        this.post = post; // 어떤 게시글에 대한 좋아요인지 설정
-    }
-
-    public void setUser(User user) {
-        this.user = user; // 어떤 사용자가 누른 좋아요인지 설정
+    // 필요 생성자만 @Builder 적용
+    @Builder
+    private PostLike(Post post, User user){
+        this.post = post;
+        this.user = user;
     }
 
 }
