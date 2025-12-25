@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 // 기본 생성자를 protected로 생성하여 외부 직접 생성은 막고, 프레임워크 사용만 허용
-@AllArgsConstructor
-// 모든 필드를 파라미터로 받는 생성자를 자동 생성
-@Builder
 public class CommentResponseDto {
     // 클라이언트로 응답 내려줄 때 사용할 DTO
 
@@ -21,6 +18,26 @@ public class CommentResponseDto {
     private String authorName; //작성자 닉네임
     private LocalDateTime createdAt; //작성시간
     private LocalDateTime updatedAt; //수정 시간
+
+    @Builder
+    private CommentResponseDto(
+            Long id,
+            String content,
+            Long postId,
+            Long authorId,
+            String authorName,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this.id = id;
+        this.content = content;
+        this.postId = postId;
+        this.authorId = authorId;
+        this.authorName = authorName;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
 
     public static CommentResponseDto from(Comment comment){
         // Comment 엔티티를 CommentResponseDto로 변환하는 정적 메서드

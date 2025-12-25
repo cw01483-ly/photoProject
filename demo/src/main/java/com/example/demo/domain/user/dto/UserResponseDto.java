@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) //외부 임의 생성제한을 위해 프로텍트
-@AllArgsConstructor
-@Builder
 /*클라이언트 응답전용 DTO
 *   - 필요한 정보만 골라 보냄(캡슐화)
 *   - password, enabled(내부정책) 등 민감필드 제외
@@ -20,21 +18,33 @@ public class UserResponseDto { //응답에 포함될 필드만 담는 상자
 
     //외부에 노출되어도 안전한 기본 프로필
     private Long id; //사용자 고유 식별자 PK
-
     private String username;
-
     private String nickname;
-
     private String email;
-
     private String profileImageUrl;
-
     private UserRole role;
-
     private LocalDateTime createdAt;
-
     private LocalDateTime updatedAt;
 
+    @Builder
+    private UserResponseDto(
+            Long id,
+            String username,
+            String nickname,
+            String email,
+            String profileImageUrl,
+            UserRole role,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt){
+        this.id = id;
+        this.username = username;
+        this.nickname = nickname;
+        this.email = email;
+        this.profileImageUrl = profileImageUrl;
+        this.role = role;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 
     // 정적 팩토리 메서드 : User엔티티 -> 응답DTO 변환
     public static UserResponseDto from(User user){ //엔티티 받아서 Dto로 바꾸는 표준 진입점

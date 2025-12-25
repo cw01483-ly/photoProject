@@ -10,8 +10,7 @@ import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
+
 // 게시글 정보 + 최신 댓글 목록 + 전체 댓글 개수
 public class PostDetailResponseDto {
 
@@ -23,6 +22,7 @@ public class PostDetailResponseDto {
     private String authorName; //User nickname
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
     // 서비스 계층에서 최신 10개만 추려서 댓글목록을 담는 필드로 설계
     private List<CommentResponseDto> latestComments;
 
@@ -35,6 +35,35 @@ public class PostDetailResponseDto {
     // 해당 게시글 Like 개수
     private long likeCount;
 
+    @Builder
+    private PostDetailResponseDto(
+            Long id,
+            String title,
+            String content,
+            int views,
+            Long authorId,
+            String authorName,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            List<CommentResponseDto> latestComments,
+            long totalCommentsCount,
+            int latestCommentsSize,
+            long likeCount
+    ) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.views = views;
+        this.authorId = authorId;
+        this.authorName = authorName;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.latestComments = latestComments;
+        this.totalCommentsCount = totalCommentsCount;
+        this.latestCommentsSize = latestCommentsSize;
+        this.likeCount = likeCount;
+    }
+
 
 
     /*      정적 팩토리 메서드 (기존 버전) -> 기존 호출부 깨지 않도록 기존 버전 유지 & 간단 호출버전
@@ -42,7 +71,7 @@ public class PostDetailResponseDto {
             PostDetailResponseDto 로 변환해주는 메서드
          - 좋아요 개수가 필요 없는 경우 기본값 0으로 세팅하여 사용
      */
-    public static PostDetailResponseDto from(
+    public static PostDetailResponseDto from( // 기존 호출부 보호용(likeCount X)
             Post post,
             List<CommentResponseDto> latestComments, //최신 댓글 목록 (최대 10)
             long totalCommentsCount, //전체 댓글 개수
