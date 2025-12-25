@@ -4,6 +4,7 @@ package com.example.demo.global.security.jwt.filter;
 import com.example.demo.global.security.CustomUserDetailsService;
 import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.global.security.jwt.service.JwtService;
+import com.example.demo.global.security.jwt.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -32,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService; // JWT 검증,파싱 담당 서비스
     private final JwtProperties jwtProperties; // 쿠키 이름, 만료시간 등 설정 값
     private final CustomUserDetailsService customUserDetailsService; // username으로 UserDetails 로드
+    private final TokenBlacklistService tokenBlacklistService; // 블랙리스트에 등록된 Access(jti) 차단여부 확인
 
     @Override
     protected void doFilterInternal(
@@ -71,17 +73,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 4) 토큰에서 username (subject) 꺼내기
+            // 4)블랙리스트 체크
+            String jti = jwtService.getJti(token);
+            if (tokenBlacklistService.isBlacklisted(jti)){
+                log.debug("[JWT FILTER] blocked by blacklist. uri={}, jti={}", request.getRequestURI(), jti);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 5) 토큰에서 username (subject) 꺼내기
             String username = jwtService.getUsername(token);
             if (username == null || username.isBlank()) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // 5) username 활용하여 UserDetails 로드 ( principal.id를 사용 가능
+            // 6) username 활용하여 UserDetails 로드 ( principal.id를 사용 가능 )
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
-            // 6) 인증 객체 생성
+            // 7) 인증 객체 생성
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -89,7 +99,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             userDetails.getAuthorities() //권한 목록
                     );
 
-            // 7) SecurityContext 에 인증 저장 (로그인 상태로 인식)
+            // 8) SecurityContext 에 인증 저장 (로그인 상태로 인식)
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {

@@ -1,0 +1,41 @@
+server:
+  port:
+
+spring:
+  datasource:
+    url:
+    username:
+    password:
+    driver-class-name:
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto:
+    show-sql:
+    properties:
+      hibernate:
+        format_sql: true
+        dialect:
+
+  servlet:
+    multipart:
+      max-file-size:
+      max-request-size:
+
+logging:
+  level:
+    org.hibernate.SQL:
+    org.hibernate.orm.jdbc.bind:
+
+jwt:
+  secret:
+  access-token-exp-minutes: 15
+  cookie-name: ACCESS_TOKEN
+
+  refresh-token-exp-days: 14
+  refresh-cookie-name: REFRESH_TOKEN
+
+app:
+  file:
+    upload-dir:
