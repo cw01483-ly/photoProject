@@ -15,7 +15,6 @@ import org.hibernate.annotations.Where;
 @Table(name = "comments")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) //파라미터 없는 기본 생성자 자동생성
-@AllArgsConstructor//모든 필드를 인자로 받는 생성자 자동 생성
 @SQLDelete(sql = "UPDATE comments SET is_deleted = true WHERE id = ?")
 /*     SQLDelete
         - delete 쿼리 호출 시 실제 DELETE FROM이 아닌
@@ -38,13 +37,13 @@ public class Comment extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY) //지연로딩
     // comment와Post의 관계 (N:1) = 여러개의 댓글 : 하나의 게시글
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "post_id", nullable = false, foreignKey = @ForeignKey(name = "fk_comments_post"))
     private Post post; //게시글
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     // comment와author의 관계 (N:1) = 여러댓글을 하나의 유저가 작성 가능
     // Comment 엔티티에서 User를 참조하는 연관관계
-    @JoinColumn(name = "author_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_comments_user"))
     private User author; //작성자
 
     /*댓글 내용 설정
