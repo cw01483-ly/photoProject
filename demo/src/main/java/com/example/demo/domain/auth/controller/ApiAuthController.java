@@ -41,16 +41,38 @@ public class ApiAuthController {
     private final UserService userService;
 
     @PostMapping("/logout") // POST /api/auth/logout
-    public ResponseEntity<ApiResponse<Void>> logout() {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
 
         // 1) 서버 측 SecurityContext 정리 (STATELESS라도 현재 요청 컨텍스트는 비워두는 게 깔끔)
         SecurityContextHolder.clearContext();
 
-         /*2) Access JWT 쿠키를 만료 시키는 Set-Cookie 생성
+        // Refresh 쿠키에서 userId추출 (Redis Refresh 삭제용)
+        Long userId = null;
+        Cookie[] cookies = request.getCookies(); // 요청 쿠키 배열
+
+        if (cookies != null) { // 쿠키 존재하면 탐색
+            for (Cookie c : cookies) { // Refresh 쿠키 찾기
+                if (jwtProperties.getRefreshCookieName().equals(c.getName())) {
+                    String refreshToken = c.getValue(); // Refresh쿠기 값
+                    // Refresh가 유효한 경우에만 userId 추출(만료/위조면 userId 추출 시도하지 않음)
+                    if (refreshToken != null && !refreshToken.isBlank() && jwtService.validateToken(refreshToken)) {
+                        userId = jwtService.getUserId(refreshToken); // Refresh claim에서 userId 추출
+                    }
+                    break; // Refresh 쿠키 확인 후 종료
+                }
+            }
+        }
+
+        // Redis에 저장된 Refresh 삭제 (단일 로그인: userId 당 Refresh 1개)
+        if  (userId != null) {
+            refreshTokenService.deleteRefreshToken(userId);
+        }
+
+         /*2) Access + Refresh JWT 쿠키를 모두 만료시키는 Set-Cookie 생성
             - value를 비우고
             - Max-Age=0 으로 즉시 만료
             - Path="/" 로 기존 로그인 쿠키와 동일 범위로 맞춤*/
-        ResponseCookie expiredCookie = ResponseCookie
+        ResponseCookie expiredAccessCookie  = ResponseCookie
                 .from(jwtProperties.getCookieName(), "") // 쿠키명은 yml(jwt.cookieName)과 동일
                 .httpOnly(true) // HttpOnly 유지
                 .path("/") // 로그인 때랑 동일하게
@@ -58,9 +80,17 @@ public class ApiAuthController {
                 // .secure(true) // HTTPS 적용 시 활성화
                 .build();
 
+        // Refresh JWT 쿠키 만료(브라우저에서 삭제되도록)
+        ResponseCookie expiredRefreshCookie = ResponseCookie
+                .from(jwtProperties.getRefreshCookieName(), "")
+                .httpOnly(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+
         // 3) Set-Cookie 내려주고 성공 응답 반환
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, expiredAccessCookie.toString(), expiredRefreshCookie.toString())
                 .body(ApiResponse.success("로그아웃 성공"));
     }
 
@@ -85,8 +115,11 @@ public class ApiAuthController {
             throw new IllegalArgumentException("Refresh 토큰이 없습니다.");
         }
 
-        // 3) Refresh 토큰 유효성 검증(서명/만료)
-        jwtService.validateToken(refreshToken);
+        // 3) Refresh 토큰 유효성 검증(서명/만료) validateToken(boolean) 결과를 반드시 반영
+        boolean refreshValid = jwtService.validateToken(refreshToken);
+        if (!refreshValid) {
+            throw new IllegalArgumentException("Refresh 토큰이 유효하지 않습니다.");
+        }
 
         // 4) Refresh에서 userId 추출
         Long userId = jwtService.getUserId(refreshToken);

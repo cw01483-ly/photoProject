@@ -125,12 +125,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         // JWT 로그아웃(POST /api/auth/logout)은 비로그인 허용 (쿠키 만료)
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
+                        // Refresh 재발급(POST /api/auth/refresh)도 비로그인 허용, Access만료 상황에서도 동작해야하므로 permitAll
+                        .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
                         // 조회성 GET API는 공개
                         .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                         // 댓글 생성 : 로그인 필수
                         .requestMatchers(HttpMethod.POST, "/api/posts/*/comments").authenticated()
-                        // 댓글 수정 : 초소한 로그인 필수, PATCH /api/comments/{commentId}
+                        // 댓글 수정 : 최소한 로그인 필수, PATCH /api/comments/{commentId}
                         .requestMatchers(HttpMethod.PATCH, "/api/comments/*").authenticated()
                         // 댓글 삭제 : 최소한 로그인 필수, DELETE /api/comments/{commentId}
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
