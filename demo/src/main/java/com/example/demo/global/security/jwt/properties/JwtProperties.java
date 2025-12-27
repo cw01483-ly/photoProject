@@ -22,4 +22,8 @@ public class JwtProperties {
     // Refresh Token
     private String refreshCookieName; // Refresh Token 쿠키 이름
     private int refreshTokenExpDays; // Refresh Token 만료 시간(일)
+
+    // Cookie Option
+    private boolean cookieSecure; // yml: jwt.cookie-secure (로컬 false / 배포 true)
+    private String cookieSameSite; // yml: jwt.cookie-same-site("Lax")
 }

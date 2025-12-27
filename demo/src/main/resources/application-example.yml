@@ -36,6 +36,9 @@ jwt:
   refresh-token-exp-days: 14
   refresh-cookie-name: REFRESH_TOKEN
 
+  cookie-secure: false     # 로컬 기본(false). AWS/HTTPS 배포 환경에서는 true로 변경
+  cookie-same-site: "Lax"
+
 app:
   file:
     upload-dir:

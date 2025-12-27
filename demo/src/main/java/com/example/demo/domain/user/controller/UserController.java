@@ -10,6 +10,7 @@ import com.example.demo.global.response.ApiResponse;
 import com.example.demo.global.security.CustomUserDetails;
 import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.global.security.jwt.service.JwtService;
+import com.example.demo.global.security.jwt.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -24,6 +25,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,7 @@ public class UserController {
     private final UserService userService; //서비스 계층 의존성(비지니스 로직 호출하기)
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
+    private final RefreshTokenService refreshTokenService;
 
     // HTTP POST요청 처리, 사용자 등록
     @PostMapping //HTTP POST요청 처리, 사용자 등록
@@ -108,6 +111,13 @@ public class UserController {
          */
         String accessToken = jwtService.generateAccessToken(principal);
 
+
+        // JWT Refresh Token 생성 + Redis 저장
+        String refreshToken = jwtService.generateRefreshToken(principal.getId());
+        Duration refreshTtl = Duration.ofDays(jwtProperties.getRefreshTokenExpDays());
+        refreshTokenService.saveRefreshToken(principal.getId(), refreshToken,  refreshTtl);
+
+
         /*
              HttpOnly 쿠키 생성
         - HttpOnly : JS 접근 차단 (XSS 방어)
@@ -115,16 +125,26 @@ public class UserController {
         - Max-Age  : JWT 만료 시간과 동일하게 설정
         - Secure   : HTTPS 환경에서만 true 권장
      */
-        ResponseCookie cookie = ResponseCookie.from(jwtProperties.getCookieName(), accessToken)
+        ResponseCookie accessCookie = ResponseCookie.from(jwtProperties.getCookieName(), accessToken)
                 .httpOnly(true)
                 .path("/")
                 .maxAge(jwtProperties.getAccessTokenExpMinutes()*60L)
-                // .secure(true) HTTPS 적용 시 활성화
+                .secure(jwtProperties.isCookieSecure()) // yml로 제어(로컬 false / 운영 true)
+                .sameSite(jwtProperties.getCookieSameSite()) //  Lax
+                .build();
+
+        // Refresh 쿠키 생성, Access 쿠키 옵션과 동일
+        ResponseCookie refreshCookie = ResponseCookie.from(jwtProperties.getRefreshCookieName(), refreshToken)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(refreshTtl)
+                .secure(jwtProperties.isCookieSecure()) // Access와 동일
+                .sameSite(jwtProperties.getCookieSameSite()) // Access와 동일(Lax)
                 .build();
 
         // 2) 응답 헤더에 Set-Cookie 추가 + 공통 응답 포멧 반환
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString(), refreshCookie.toString())
                 .body(ApiResponse.success(response, "로그인 성공"));
     }
 
