@@ -7,6 +7,7 @@ import com.example.demo.global.security.jwt.handler.JwtAccessDeniedHandler;
 import com.example.demo.global.security.jwt.handler.JwtAuthenticationEntryPoint;
 import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.global.security.jwt.service.JwtService;
+import com.example.demo.global.security.jwt.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,9 +39,11 @@ public class SecurityConfig {
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtService jwtService, // JwtService 빈 주입
             JwtProperties jwtProperties, // JwtProperties 빈 주입
-            CustomUserDetailsService userDetailsService // CustomUserDetailsService 빈 주입
+            CustomUserDetailsService userDetailsService, // CustomUserDetailsService 빈 주입
+            TokenBlacklistService tokenBlacklistService
     ) {
-        return new JwtAuthenticationFilter(jwtService, jwtProperties, userDetailsService);
+        return new JwtAuthenticationFilter(
+                jwtService, jwtProperties, userDetailsService, tokenBlacklistService);
     }
 
     /*
