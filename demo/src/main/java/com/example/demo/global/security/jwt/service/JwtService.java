@@ -16,6 +16,7 @@ import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
+import java.time.Duration;
 
 /*
     JwtService
@@ -189,4 +190,20 @@ public class JwtService {
     }
 
 
+    /* ⭐ 토큰의 "남은 TTL" 계산
+        Access 블랙리스트 TTL을 "Access 남은 만료 시간"으로 맞추기 위한 유틸
+     */
+    public Duration getRemainingTtl(String token) {
+
+        Claims claims = parseClaims(token); // exp 포함, 서명/만료 검증 포함 파싱
+        Date expiration = claims.getExpiration(); // 만료 시각(Date)
+
+        long remainingMillis = expiration.getTime() - System.currentTimeMillis(); // 남은 시간(ms)
+
+        if (remainingMillis <= 0) { // 이미 만료됐으면 0초로 처리
+            return Duration.ZERO;
+        }
+
+        return Duration.ofMillis(remainingMillis); // 남은 TTL 반환
+    }
 }

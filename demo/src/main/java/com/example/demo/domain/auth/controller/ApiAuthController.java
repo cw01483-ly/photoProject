@@ -17,6 +17,7 @@ import com.example.demo.global.security.CustomUserDetails;
 import com.example.demo.global.security.jwt.properties.JwtProperties;
 import com.example.demo.global.security.jwt.service.JwtService;
 import com.example.demo.global.security.jwt.service.RefreshTokenService;
+import com.example.demo.global.security.jwt.service.TokenBlacklistService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class ApiAuthController {
     private final JwtProperties jwtProperties; // 쿠키명/만료/옵션(jwt.*) 설정값 사용
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final UserService userService;
 
     @PostMapping("/logout") // POST /api/auth/logout
@@ -103,19 +105,62 @@ public class ApiAuthController {
                 refreshTtl
         );
 
-        // 7) 회전 실패 -> (D-1 사고 대응은 다음 단계) 일단 실패 처리
+        // 재사용 감지 사고 대응
         if (!rotated) {
-            throw new IllegalArgumentException("Refresh 토큰이 유효하지 않습니다.");
+            // 6-1) Redis에 저장된 Refresh 삭제
+            refreshTokenService.deleteRefreshToken(userId);
+            // 6-2) 요청에 포함된 Access 토큰 추출
+            String accessToken = null;
+            if (cookies != null) {
+                for (Cookie c : cookies) {
+                    if (jwtProperties.getCookieName().equals(c.getName())) {
+                        accessToken = c.getValue();
+                        break;
+                    }
+                }
+            }
+
+            // 6-3) Access jti 추출 & 블랙리스트 등록
+            if (accessToken != null && !accessToken.isBlank()) {
+                String jti = jwtService.getJti(accessToken);// Access 토큰에서 jti를 뽑아 차단 대상을 특정
+                Duration accessRemainingTtl = jwtService.getRemainingTtl(accessToken);
+                // Access 남은 만료 시간(Duration)을 계산, 블랙리스트TTL을 Access 남은 TTL과 맞춰 부담 최소화
+                tokenBlacklistService.blacklistAccessToken(jti, accessRemainingTtl);
+                // jti를 Redis 블랙리스트에 등록
+            }
+
+            // 6-4) Access + Refresh 쿠키 모두 만료 처리
+            ResponseCookie expiredAccessCookie = ResponseCookie// jwt.cookie-name을 사용해 동일한 쿠키를 만료시키기
+                    .from(jwtProperties.getCookieName(), "")
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(0)
+                    .build();
+
+            ResponseCookie expiredRefreshCookie = ResponseCookie
+                    .from(jwtProperties.getRefreshCookieName(), "")
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(0) // 즉시 만료
+                    .build();
+
+            // 6-5) 401 실패 응답 반환
+            return ResponseEntity.status(401)
+                    .header(HttpHeaders.SET_COOKIE,
+                            expiredAccessCookie.toString(),
+                            expiredRefreshCookie.toString())
+                    .body(ApiResponse.fail("비정상적인 토큰 재사용이 감지되어 로그아웃되었습니다."));
         }
 
-        // 8) userId -> User -> CustomUserDetails 복원
+
+        // 7) userId -> User -> CustomUserDetails 복원
         User user = userService.getById(userId);
         CustomUserDetails principal = new CustomUserDetails(user);
 
-        // 9) 새 Access Token 발급
+        // 8) 새 Access Token 발급
         String newAccessToken = jwtService.generateAccessToken(principal);
 
-        // 10) Access 쿠키 생성
+        // 9) Access 쿠키 생성
         ResponseCookie accessCookie = ResponseCookie.from(
                         jwtProperties.getCookieName(), newAccessToken
                 )
@@ -126,7 +171,7 @@ public class ApiAuthController {
                 .sameSite(jwtProperties.getCookieSameSite())
                 .build();
 
-        // 11) Refresh 쿠키 생성
+        // 10) Refresh 쿠키 생성
         ResponseCookie refreshCookie = ResponseCookie.from(
                         jwtProperties.getRefreshCookieName(), newRefreshToken
                 )
@@ -137,7 +182,7 @@ public class ApiAuthController {
                 .sameSite(jwtProperties.getCookieSameSite())
                 .build();
 
-        // 12) 쿠키 갱신 + 성공 응답 (형님 확정: 응답 바디 null)
+        // 12) 쿠키 갱신 + 성공 응답
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString(), refreshCookie.toString())
                 .body(ApiResponse.success(null, "토큰 재발급 성공"));
