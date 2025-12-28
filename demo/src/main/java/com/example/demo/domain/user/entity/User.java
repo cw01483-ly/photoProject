@@ -9,11 +9,14 @@ import lombok.*;
 import com.example.demo.domain.user.role.UserRole;
 import com.fasterxml.jackson.annotation.JsonIgnore; //비밀번호 JSON직렬화 방지
 import java.time.LocalDateTime;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 
 /*
     User엔티티 , 보안주체인 UserDetails는 따로 분리해서 구성할 예정
     DB에서 users 테이블로 매핑됨
+    SoftDelete 적용 (삭제 시 is_deleted=true)
  */
 @Entity //엔티티클래스 선언
 @Getter //모든 필드의 getter 자동 생성
@@ -29,6 +32,8 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "uk_users_email", columnNames = "email")
         }
 )
+@SQLDelete(sql = "UPDATE users SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false")
 public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간설정 자동관리
     @Id //기본키(PK) 지정
     @GeneratedValue(strategy = GenerationType.IDENTITY)//키값 자동 증가
@@ -67,7 +72,7 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     @Column(nullable = false, length = 100)
     private String email;
 
-    //jwc?
+
     //nickname
     @Pattern(
             regexp = "^[A-Za-z0-9가-힣_]+$",
@@ -119,12 +124,19 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     //추후 관리자계정이 false로 바꾼다면 해당 계정은 비활성화됨
 
 
+    /*
+        SoftDelete 플래그
+        - true  : 탈퇴(삭제)된 사용자
+        - false : 정상 사용자
+        - @Where 로 인해 기본 조회에서 is_deleted = true 유저 자동 제외
+     */
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
+
+
     //마지막 접속 시각 필드
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-    /*추후 추가 예정
-    * 1. @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    * 2. private List<Post> posts = new ArrayList<>();*/
 
     // 마지막 접속 시각 메서드.(성공시 UserService에서 호출)
     public void updateLastLoginAt(LocalDateTime lastLoginAt){
@@ -132,6 +144,16 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
     }
 
     //              도메인 비지니스 메서드
+
+
+    /*
+    사용자 탈퇴 처리(SoftDelete)
+        - 실제 DELETE 쿼리가 아닌 isDeleted 플래그 변경
+        - UserService.delete()에서 호출
+     */
+    public void delete() {
+        this.isDeleted = true;
+    }
 
     //프로필 수정 (닉네임, 이메일)
     public void updateProfile(String newNickname, String newEmail){
@@ -159,33 +181,8 @@ public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간�
         }
         this.password = encodedPassword;
     }
-    /*public void changePassword(String currentRawPassword,
-                               String newRawPassword,
-                               PasswordEncoder passwordEncoder){
-        *//*currentRawPassword : 사용자가 입력한 기존 평문 비밀번호
-          newRawPassword     : 사용자가 입력한 새 평문 비밀번호
-          passwordEncoder    : BCryptPasswordEncoder 등 스프링 시큐리티 */
-    /*
 
-        //1. 기존 비밀번호 일치하는지 검사
-        if(!passwordEncoder.matches(currentRawPassword,this.password)){
-            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
-        }
 
-        //2. 새 비밀번호 형식 검증
-        if(newRawPassword == null || newRawPassword.length()<8){
-            throw new IllegalArgumentException("비밀번호는 8자 이상이어야 합니다.");
-        }
-
-        //3. 기존 비밀번호와 새 비밀번호 동일 여부 검사
-        if(passwordEncoder.matches(newRawPassword,this.password)){
-            throw new IllegalArgumentException("이전과 동일한 비밀번호는 사용할 수 없습니다.");
-        }
-
-        //4. 모든 조건문 통과시 새 비밀번호를 암호화 한 후 저장
-        this.password = passwordEncoder.encode(newRawPassword);
-    }
-*/
     // 로그인 성공 시 마지막 로그인 시각 갱신
     public void markLoginSuccess() {
         this.lastLoginAt = LocalDateTime.now();

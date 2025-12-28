@@ -223,11 +223,13 @@ public class UserService {
     @PreAuthorize("hasRole('ADMIN') or #id == principal.id") //본인 혹은 관리자만
     public void delete(Long id){
         User user = getById(id);//존재 확인
-        userRepository.delete(user); // 삭제 실행
+        user.delete();
         /*
             연관관계 정책 주의
                 -Post 등 연관 엔티티가 생기면 orphanRemoval/CASCADE/FK 옵션 정책을 맞춰야함
                 - 운영에서는 '탈퇴 처리(soft delete) 전략도 고려해볼 필요 있을듯.
+             >>
+             SoftDelete적용: 물리 삭제가 아닌 엔티티 플래그를 true로 변경, 트랜잭션 종료 시 Dirty Checking으로 UPDATE 반영
          */
     }
 
