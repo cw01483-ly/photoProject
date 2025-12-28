@@ -43,7 +43,7 @@ public class Comment extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     // comment와author의 관계 (N:1) = 여러댓글을 하나의 유저가 작성 가능
     // Comment 엔티티에서 User를 참조하는 연관관계
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_comments_user"))
+    @JoinColumn(name = "author_id", nullable = false, foreignKey = @ForeignKey(name = "fk_comments_user"))
     private User author; //작성자
 
     /*댓글 내용 설정

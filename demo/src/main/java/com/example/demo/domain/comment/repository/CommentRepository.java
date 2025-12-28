@@ -77,7 +77,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByPostIdWithAuthor(@Param("postId") Long postId);
 
     /* 삭제여부 무시 후 단건 조회 (내부 확인용, @Where 우회)
-        *Comment 엔티티의 @Where(claus = "is_deleted = false")가 적용
+        *Comment 엔티티의 @Where(clause = "is_deleted = false")가 적용
             >> JPQL/메서드 쿼리로는 기본적으로 조회 불가
             nativeQuery는 @Where영향을 받지 않으므로, 삭제 포함 "존재/상태" 확인 에만 사용
      */
