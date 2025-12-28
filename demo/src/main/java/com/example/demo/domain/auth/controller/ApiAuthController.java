@@ -187,7 +187,8 @@ public class ApiAuthController {
 
 
         // 7) userId -> User -> CustomUserDetails 복원
-        User user = userService.getById(userId);
+        User user = userService.getByIdForTokenRefresh(userId);
+        // refresh에서는 principal 전제(@PreAuthorize) 메서드(getById) 호출 금지
         CustomUserDetails principal = new CustomUserDetails(user);
 
         // 8) 새 Access Token 발급

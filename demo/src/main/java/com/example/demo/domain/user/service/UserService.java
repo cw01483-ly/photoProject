@@ -154,6 +154,15 @@ public class UserService {
         * (ex : 404 상태코드와 사용자 친화 메시지로 매핑할 것)*/
     }
 
+    /* Refresh 전용 내부 조회 메서드 /api/auth/refresh는 Access없이도 동작해야함, principal 을 전제로
+         하는 @PreAuthorize 메서드(getById)를 타지 않게 분리, 내부 전용*/
+    public User getByIdForTokenRefresh(Long id){ // Refresh 흐름 에서만 사용하는 PK(id) 조회
+        // 미 존재시 EntityNotFoundException 던지기
+        return userRepository.findById(id) // Optional<User> 반환
+                .orElseThrow(() -> new EntityNotFoundException("해당 사용자를 찾을 수 없습니다. id = "+id));
+    }
+
+
     // 전체 조회(Read All), 관리자용
     @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAll(){ //List타입으로 빈 리스트반환[]이 가능하기에 elseTrow 불필요
