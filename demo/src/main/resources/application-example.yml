@@ -42,3 +42,16 @@ jwt:
 app:
   file:
     upload-dir:
+
+
+# Actuator 최소 노출(실험용)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+  endpoint:
+    health:
+      show-details: never
+      # health 상세정보 최소화

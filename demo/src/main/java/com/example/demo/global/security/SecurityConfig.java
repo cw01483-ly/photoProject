@@ -175,6 +175,11 @@ public class SecurityConfig {
                 )
                 // 요청별 인가(Authorization) 규칙 정의
                 .authorizeHttpRequests(auth -> auth
+                        // Actuator 는 실험에 필요한 것만 최소 허용
+                        .requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
+                        // 그 외 actuator는 전부 차단(정보 노출 방지)
+                        .requestMatchers("/actuator/**").denyAll()
+
                         // 에러 페이지
                         .requestMatchers("/error/**").permitAll()
 
