@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /*      CommentRepository
         - Comment 엔티티에 대한 CRUD 기능
@@ -60,9 +61,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
    */
     @Query("SELECT c FROM Comment c JOIN FETCH c.author WHERE c.id = :commentId")
     Comment findByIdWithAuthor(@Param("commentId") Long commentId);
-    // ⭐ 추가된 메서드 (commentId로 댓글 + 작성자까지 같이 조회)
+    // ⭐ commentId로 댓글 + 작성자까지 같이 조회
 
-    /* ⭐ [추가] 게시글 기준 댓글 + 작성자(author)를 함께 조회 (Fetch Join)
+    /* ⭐ 게시글 기준 댓글 + 작성자(author)를 함께 조회 (Fetch Join)
    - LazyInitializationException 방지
    - CommentResponseDto에서 author.nickname 접근 가능
 */
@@ -74,5 +75,13 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     ORDER BY c.id DESC
 """)
     List<Comment> findByPostIdWithAuthor(@Param("postId") Long postId);
+
+    /* 삭제여부 무시 후 단건 조회 (내부 확인용, @Where 우회)
+        *Comment 엔티티의 @Where(claus = "is_deleted = false")가 적용
+            >> JPQL/메서드 쿼리로는 기본적으로 조회 불가
+            nativeQuery는 @Where영향을 받지 않으므로, 삭제 포함 "존재/상태" 확인 에만 사용
+     */
+    @Query(value = "select  * from comments where id = :id", nativeQuery = true)
+    Optional<Comment> findRawById(@Param("id") Long id);
 
 }
