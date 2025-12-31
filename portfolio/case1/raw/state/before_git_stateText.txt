@@ -1,0 +1,11 @@
+lys@DESKTOP-A5GME2Q MINGW64 ~/Desktop/photoProject (case1/before)
+$ git branch
+  case1/after
+* case1/before
+  master
+
+lys@DESKTOP-A5GME2Q MINGW64 ~/Desktop/photoProject (case1/before)
+$ git log --oneline -3
+a827b4a (HEAD -> case1/before) ix(ui-posts): 게시글 목록 번호 계산 로직 개선 (삭제/페이징 대응)
+2d9a72c feat(ui): 댓글 수정 화면 추가 및 상세 페이지 버튼 구성
+ebaeaf6 fix(ui): 댓글 작성/수정/삭제 UI 요청 매핑 정합성 수정
