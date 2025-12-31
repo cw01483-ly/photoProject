@@ -1,0 +1,200 @@
+2025-12-31T00:07:43.574+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        (
+            p1_0.is_deleted = 0
+        ) 
+    order by
+        p1_0.id desc 
+    limit
+        ?
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        (
+            p1_0.is_deleted = 0
+        ) 
+    order by
+        p1_0.id desc 
+    limit
+        ?
+2025-12-31T00:07:43.574+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:INTEGER) <- [20]
+2025-12-31T00:07:43.581+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(p1_0.id) 
+    from
+        posts p1_0 
+    where
+        (
+            p1_0.is_deleted = 0
+        )
+Hibernate: 
+    select
+        count(p1_0.id) 
+    from
+        posts p1_0 
+    where
+        (
+            p1_0.is_deleted = 0
+        )
+2025-12-31T00:07:43.584+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+Hibernate: 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+2025-12-31T00:07:43.584+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [1225]
+2025-12-31T00:07:43.585+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+2025-12-31T00:07:43.585+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [770]
+2025-12-31T00:07:43.587+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+Hibernate: 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+2025-12-31T00:07:43.588+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [1224]
+2025-12-31T00:07:43.590+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+Hibernate: 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+2025-12-31T00:07:43.590+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [1223]
+2025-12-31T00:07:43.592+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+Hibernate: 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
+        p1_0.id=?
+2025-12-31T00:07:43.593+09:00 TRACE 18640 --- [nio-8008-exec-6] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [1222]
+2025-12-31T00:07:43.595+09:00 DEBUG 18640 --- [nio-8008-exec-6] org.hibernate.SQL                        : 
+    select
+        count(pl1_0.id) 
+    from
+        post_likes pl1_0 
+    join
+        posts p1_0 
+            on p1_0.id=pl1_0.post_id 
+            and (p1_0.is_deleted = 0) 
+    where
