@@ -18,7 +18,7 @@
 - 게시글 목록 조회 시 발생한 N+1 쿼리 문제를 해결
 - 쿼리 수 고정 및 tail latency(p95 / p99) 개선 여부를 지표로 검증
 
-👉 [Case1 산출물 보기](portfolio/case1)
+👉 [Case1 상세 보기](portfolio/case1/README.md)
 
 ---
 
