@@ -89,9 +89,12 @@ portfolio/case1/
 
 ---
 
-## 6. Velog 안내
+## 6. 안내 (Velog · Evidence)
 
-본 Case의 판단 과정, 대안 비교, 선택 이유는  
-아래 기술 블로그(Velog)에 별도로 정리되어 있다.
+본 Case의 **판단 과정과 선택 이유**는 기술 블로그(Velog)에 정리되어 있으며,  
+**실험 결과에 대한 검증 증거(PDF)** 는 GitHub Case1 폴더에 별도로 제공한다.
 
-- [Case1 Velog – N+1 쿼리 문제 before/after 비교 실험 설계와 해결 선택](https://velog.io/@cw01483/N1-%EC%BF%BC%EB%A6%AC-%EB%AC%B8%EC%A0%9C-beforeafter-%EB%B9%84%EA%B5%90-%EC%8B%A4%ED%97%98%EC%9D%84-%EC%84%A4%EA%B3%84%ED%95%9C-%EC%9D%B4%EC%9C%A0%EC%99%80-%ED%95%B4%EA%B2%B0-%EC%84%A0%ED%83%9D)
+- Velog 
+    - [Case1 Velog – N+1 쿼리 문제 before/after 비교 실험 설계와 해결 선택](https://velog.io/@cw01483/N1-%EC%BF%BC%EB%A6%AC-%EB%AC%B8%EC%A0%9C-beforeafter-%EB%B9%84%EA%B5%90-%EC%8B%A4%ED%97%98%EC%9D%84-%EC%84%A4%EA%B3%84%ED%95%9C-%EC%9D%B4%EC%9C%A0%EC%99%80-%ED%95%B4%EA%B2%B0-%EC%84%A0%ED%83%9D)
+- Evidence Pack (검증 증거 · 결과 원본)
+    - [Case1_N+1_Query_Optimization_Evidence.pdf](./Case1_N+1_Query_Optimization_Evidence.pdf)
