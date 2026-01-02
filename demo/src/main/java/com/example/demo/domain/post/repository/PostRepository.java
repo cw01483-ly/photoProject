@@ -76,9 +76,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                     "join p.author a " +
                     "left join com.example.demo.domain.post.entity.PostLike pl on pl.post = p " +
                     "group by " +
-                            " p.id, p.displayNumber, p.title, p.content, p.views, a.nickname, p.createdAt, p.updatedAt " +
+                            " p.id, p.displayNumber, p.title, p.content, p.views, " +
+                            "a.nickname, p.createdAt, p.updatedAt " +
                     "order by p.id desc",
-            countQuery = "select count(p) from Post p"
+            countQuery = "select count(distinct p.id) " +
+                    "from Post p left join com.example.demo.domain.post.entity.PostLike pl on pl.post = p"
     )
     Page<PostListResponseDto> findPostListWithLikeCount(Pageable pageable);
 
