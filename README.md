@@ -7,33 +7,33 @@
 
 ---
 
-##  Performance Improvement Cases
+## ⚫ Performance Improvement Cases
 
 아래는 실제 운영 환경을 기준으로  
 조회·페이징·설계 리스크를 검증한 성능 개선 사례들입니다.
 ---
 
-### ● Case1. 조회 성능 개선 – N+1 Query 제거
+### ⬤ Case1. 조회 성능 개선 – N+1 Query 제거
 
 - 게시글 목록 조회 시 발생한 N+1 쿼리 문제를 해결
 - 쿼리 수 고정 및 tail latency(p95 / p99) 개선 여부를 지표로 검증
 
-👉 [Case1 상세 보기](portfolio/case1/README.md)
+👉 [Case1 README 보기](portfolio/case1/README.md)
 
 ---
 
-### ● Case2. 페이징 조회 성능 개선 – Index & COUNT 최적화
+### ⬤ Case2. 페이징 조회 성능 개선 – Index & COUNT 최적화
 
 - 페이징 조회 시 COUNT 쿼리 비용과 인덱스 설계의 영향 분석
 - 인덱스 설계 변경을 통해 tail latency(P99) 개선 효과 검증
 
-👉 [Case2 산출물 보기](./portfolio/case2)
+👉 [Case2 README 보기](portfolio/case2/README.md)
 
 ---
 
-### ● Case3. 설계 검증 – JPA 연관관계 주인 정합성
+### ⬤ Case3. 설계 검증 – JPA 연관관계 주인 정합성
 
 - 연관관계 주인 혼동으로 발생할 수 있는 정합성 리스크 점검
 - ERD(FK 기준)와 테스트를 통해 현재 설계의 안정성 검증
 
-👉 [Case3 산출물 보기](./portfolio/case3)
+👉 [Case3 README 보기](portfolio/case3/README.md)
