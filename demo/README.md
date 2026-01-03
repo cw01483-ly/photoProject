@@ -28,7 +28,7 @@
 - 페이징 조회 시 COUNT 쿼리 비용과 인덱스 설계의 영향 분석
 - 인덱스 설계 변경을 통해 tail latency(P99) 개선 효과 검증
 
-👉 [Case2 README 보기](./portfolio/case2)
+👉 [Case2 README 보기](./portfolio/case2/README.md)
 
 ---
 
