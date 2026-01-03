@@ -1,0 +1,16 @@
+config:
+  target: "http://localhost:8008"
+  phases:
+    - duration: 120        # 2분
+      arrivalRate: 4      # 초당 4명 시작(RPS를 올리기 위한 진입 부하)
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Case2 - GET /api/posts paging"
+    flow:
+      - get:
+          url: "/api/posts?page=0&size=20&sort=id,desc"
+          expect:
+            - statusCode: 200
