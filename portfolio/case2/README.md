@@ -55,18 +55,18 @@
 ## 4. 대표 증거
 
 ### 실행계획 증거
-- [COUNT 쿼리 EXPLAIN (Before / After)](portfolio/case2/explain)
-- [인덱스 생성 전·후 SHOW INDEX 결과](portfolio/case2/explain)
+- [COUNT 쿼리 EXPLAIN (Before / After)](explain)
+- [인덱스 생성 전·후 SHOW INDEX 결과](explain)
 
 ### 부하 테스트 증거
-- [Artillery 부하 테스트 요약 결과](portfolio/case2/artillery)
-- [Artillery 실행 로그 및 원본 결과](portfolio/case2/artillery)
+- [Artillery 부하 테스트 요약 결과](artillery)
+- [Artillery 실행 로그 및 원본 결과](artillery)
 
 ### 모니터링 증거
-- [/api/posts Grafana latency 스크린샷 (Before / After)](portfolio/case2/grafana)
+- [/api/posts Grafana latency 스크린샷 (Before / After)](grafana)
 
 ### 쿼리 실행 증거
-- [Page 조회 시 SQL 로그 (COUNT 쿼리 포함)](portfolio/case2/logs)
+- [Page 조회 시 SQL 로그 (COUNT 쿼리 포함)](logs)
 
 
 
