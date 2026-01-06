@@ -58,7 +58,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = "select * from posts where id = :id", nativeQuery = true)
     Optional<Post> findRawById(@Param("id") Long id);
 
-    // 7) [case4-1] 목록 조회 전용 DTO ( N+1  제거 목적 )
+    // 7) [case1] 목록 조회 전용 DTO ( N+1  제거 목적 )
     @Query(
             value =
                     "select new com.example.demo.domain.post.dto.PostListResponseDto(" +
@@ -79,8 +79,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                             " p.id, p.displayNumber, p.title, p.content, p.views, " +
                             "a.nickname, p.createdAt, p.updatedAt " +
                     "order by p.id desc",
-            countQuery = "select count(distinct p.id) " +
-                    "from Post p left join com.example.demo.domain.post.entity.PostLike pl on pl.post = p"
+            countQuery =
+                    "select count(p.id) " +
+                    "from Post p"
     )
     Page<PostListResponseDto> findPostListWithLikeCount(Pageable pageable);
 
