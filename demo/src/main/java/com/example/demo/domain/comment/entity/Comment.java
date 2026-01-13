@@ -35,7 +35,7 @@ public class Comment extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) //지연로딩
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) //지연로딩
     // comment와Post의 관계 (N:1) = 여러개의 댓글 : 하나의 게시글
     @JoinColumn(name = "post_id", nullable = false, foreignKey = @ForeignKey(name = "fk_comments_post"))
     private Post post; //게시글

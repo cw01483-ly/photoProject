@@ -21,6 +21,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.web.servlet.MockMvc; // 가짜 HTTP 요청/응답 도구
+import java.lang.reflect.Field;
+
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
@@ -93,7 +95,8 @@ public class CommentControllerTest extends BaseIntegrationTest {
                 3) 유저(User)     : 최상위 부모 엔티티
             - 이렇게 "자식 >> 부모" 순서로 지워야 외래 키 제약 조건 위반을 피할 수 있다.
          */
-        jdbcTemplate.execute("DELETE FROM comments");
+        jdbcTemplate.execute("DELETE FROM post_likes"); // PostLike가 Post를 FK로 참조하므로 먼저 삭제
+        jdbcTemplate.execute("DELETE FROM comments");   // Post보다 먼저 삭제 유지
         jdbcTemplate.execute("DELETE FROM posts");
         jdbcTemplate.execute("DELETE FROM users");
     }
@@ -746,6 +749,26 @@ public class CommentControllerTest extends BaseIntegrationTest {
         assertThat(exists).isFalse();
     }
 
+
+
+    // ⭐ 리플렉션 기반 테스트
+    @Test
+    @DisplayName("C-1: Comment.post는 필수 관계이므로 @ManyToOne(optional=false)여야 한다.")
+    void comment_post_manyToOne_optional_shouldBeFalse() throws Exception {
+        // [GIVEN] Comment 엔티티의 post 필드 리플렉션으로 조회
+        Field postField = Comment.class.getDeclaredField("post");
+
+        // [WHEN] @ManyToOne 어노테이션을 꺼내서 optional 값을 확인
+        jakarta.persistence.ManyToOne manyToOne = postField.getAnnotation(jakarta.persistence.ManyToOne.class);
+
+        // [THEN]
+        // - manyToOne이 null이면 매핑 자체가 깨진 것이므로 즉시 실패
+        assertThat(manyToOne).isNotNull();
+
+        // - DB는 comments.post_id NOT NULL인데,
+        //   JPA 표현도 "필수(optional=false)"로 맞춰야 한다는 정책을 테스트로 고정
+        assertThat(manyToOne.optional()).isFalse();
+    }
 
 
 
