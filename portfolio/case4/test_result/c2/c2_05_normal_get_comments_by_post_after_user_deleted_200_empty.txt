@@ -1,0 +1,108 @@
+2026-01-13T20:25:14.607+09:00 DEBUG 21596 --- [nio-8008-exec-2] org.hibernate.SQL                        : 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        p1_0.id=? 
+        and (
+            p1_0.is_deleted = 0
+        )
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        p1_0.id=? 
+        and (
+            p1_0.is_deleted = 0
+        )
+2026-01-13T20:25:14.607+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [101061]
+2026-01-13T20:25:14.609+09:00 DEBUG 21596 --- [nio-8008-exec-2] org.hibernate.SQL                        : 
+    select
+        c1_0.id,
+        c1_0.author_id,
+        a1_0.id,
+        a1_0.created_at,
+        a1_0.email,
+        a1_0.enabled,
+        a1_0.is_deleted,
+        a1_0.last_login_at,
+        a1_0.nickname,
+        a1_0.password,
+        a1_0.profile_image_url,
+        a1_0.role,
+        a1_0.updated_at,
+        a1_0.username,
+        c1_0.content,
+        c1_0.created_at,
+        c1_0.is_deleted,
+        c1_0.post_id,
+        c1_0.updated_at 
+    from
+        comments c1_0 
+    join
+        users a1_0 
+            on a1_0.id=c1_0.author_id 
+            and (a1_0.is_deleted = 0) 
+    where
+        (
+            c1_0.is_deleted = 0
+        ) 
+        and c1_0.post_id=? 
+    order by
+        c1_0.id desc
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.author_id,
+        a1_0.id,
+        a1_0.created_at,
+        a1_0.email,
+        a1_0.enabled,
+        a1_0.is_deleted,
+        a1_0.last_login_at,
+        a1_0.nickname,
+        a1_0.password,
+        a1_0.profile_image_url,
+        a1_0.role,
+        a1_0.updated_at,
+        a1_0.username,
+        c1_0.content,
+        c1_0.created_at,
+        c1_0.is_deleted,
+        c1_0.post_id,
+        c1_0.updated_at 
+    from
+        comments c1_0 
+    join
+        users a1_0 
+            on a1_0.id=c1_0.author_id 
+            and (a1_0.is_deleted = 0) 
+    where
+        (
+            c1_0.is_deleted = 0
+        ) 
+        and c1_0.post_id=? 
+    order by
+        c1_0.id desc
+2026-01-13T20:25:14.609+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [101061]

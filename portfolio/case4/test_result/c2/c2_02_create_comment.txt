@@ -1,0 +1,146 @@
+2026-01-13T20:04:43.804+09:00  INFO 21596 --- [nio-8008-exec-5] c.e.d.g.s.CustomUserDetailsService       : 🔍 로그인 시도 - username: username6
+2026-01-13T20:04:43.806+09:00 DEBUG 21596 --- [nio-8008-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.username=?
+2026-01-13T20:04:43.807+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [username6]
+2026-01-13T20:04:43.817+09:00 DEBUG 21596 --- [nio-8008-exec-5] org.hibernate.SQL                        : 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        p1_0.id=? 
+        and (
+            p1_0.is_deleted = 0
+        )
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.user_id,
+        p1_0.content,
+        p1_0.created_at,
+        p1_0.display_number,
+        p1_0.image_path,
+        p1_0.is_deleted,
+        p1_0.title,
+        p1_0.updated_at,
+        p1_0.views 
+    from
+        posts p1_0 
+    where
+        p1_0.id=? 
+        and (
+            p1_0.is_deleted = 0
+        )
+2026-01-13T20:04:43.817+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [101061]
+2026-01-13T20:04:43.820+09:00 DEBUG 21596 --- [nio-8008-exec-5] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        u1_0.id=? 
+        and (
+            u1_0.is_deleted = 0
+        )
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        u1_0.id=? 
+        and (
+            u1_0.is_deleted = 0
+        )
+2026-01-13T20:04:43.820+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [793]
+2026-01-13T20:04:43.826+09:00 DEBUG 21596 --- [nio-8008-exec-5] org.hibernate.SQL                        : 
+    insert 
+    into
+        comments
+        (author_id, content, created_at, is_deleted, post_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        comments
+        (author_id, content, created_at, is_deleted, post_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?)
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (1:BIGINT) <- [793]
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (2:VARCHAR) <- [SoftDelete_comment]
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (3:TIMESTAMP) <- [2026-01-13T20:04:43.823459600]
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (4:BOOLEAN) <- [false]
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (5:BIGINT) <- [101061]
+2026-01-13T20:04:43.827+09:00 TRACE 21596 --- [nio-8008-exec-5] org.hibernate.orm.jdbc.bind              : binding parameter (6:TIMESTAMP) <- [2026-01-13T20:04:43.823459600]

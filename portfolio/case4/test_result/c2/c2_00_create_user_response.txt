@@ -1,0 +1,114 @@
+2026-01-13T19:50:30.844+09:00  INFO 21596 --- [nio-8008-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-13T19:50:30.845+09:00  INFO 21596 --- [nio-8008-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-13T19:50:30.848+09:00  INFO 21596 --- [nio-8008-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-01-13T19:50:30.889+09:00 DEBUG 21596 --- [nio-8008-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.username=?
+2026-01-13T19:50:30.890+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [username6]
+2026-01-13T19:50:30.894+09:00 DEBUG 21596 --- [nio-8008-exec-2] org.hibernate.SQL                        : 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.created_at,
+        u1_0.email,
+        u1_0.enabled,
+        u1_0.is_deleted,
+        u1_0.last_login_at,
+        u1_0.nickname,
+        u1_0.password,
+        u1_0.profile_image_url,
+        u1_0.role,
+        u1_0.updated_at,
+        u1_0.username 
+    from
+        users u1_0 
+    where
+        (
+            u1_0.is_deleted = 0
+        ) 
+        and u1_0.email=?
+2026-01-13T19:50:30.895+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (1:VARCHAR) <- [username6@example.com]
+2026-01-13T19:50:30.985+09:00 DEBUG 21596 --- [nio-8008-exec-2] org.hibernate.SQL                        : 
+    insert 
+    into
+        users
+        (created_at, email, enabled, is_deleted, last_login_at, nickname, password, profile_image_url, role, updated_at, username) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        users
+        (created_at, email, enabled, is_deleted, last_login_at, nickname, password, profile_image_url, role, updated_at, username) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-13T19:50:30.985+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (1:TIMESTAMP) <- [2026-01-13T19:50:30.976258100]
+2026-01-13T19:50:30.985+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (2:VARCHAR) <- [username6@example.com]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (3:BOOLEAN) <- [true]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (4:BOOLEAN) <- [false]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (5:TIMESTAMP) <- [null]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (6:VARCHAR) <- [uname6]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (7:VARCHAR) <- [$2a$10$AL4BwkEwvDaNdhKVcsRtRu9zgPz9PrnpBFhSycv28g2oMDecTSOOG]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (8:VARCHAR) <- [/images/default_profile.png]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (9:ENUM) <- [USER]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (10:TIMESTAMP) <- [2026-01-13T19:50:30.976258100]
+2026-01-13T19:50:30.986+09:00 TRACE 21596 --- [nio-8008-exec-2] org.hibernate.orm.jdbc.bind              : binding parameter (11:VARCHAR) <- [username6]
