@@ -1,5 +1,7 @@
 package com.example.demo.domain.comment.service;
 
+import com.example.demo.domain.comment.dto.CommentAdminResponseDto;
+import com.example.demo.domain.comment.dto.CommentResponseDto;
 import com.example.demo.domain.comment.entity.Comment;
 import com.example.demo.domain.comment.repository.CommentRepository;
 import com.example.demo.domain.post.entity.Post;
@@ -77,11 +79,20 @@ public class CommentService {
         반환값
         - 해당 게시글에 달린 댓글 목록 (List<Comment>)
      */
-    public List<Comment> getCommentsByPost(Long postId) {
+    public List<Comment> getCommentsByPost(Long postId, CustomUserDetails userDetails) {
 
         // 1) 우선 게시글이 실제로 존재하는지 확인 (없으면 예외)
         postRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. id=" + postId));
+
+        // ADMIN 여부 판별
+        boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        // 삭제 데이터 조회는 관리자만, 일반 회원 : 기존 로직 유지(JOIN FETCH로 author.nickname접근)
+        if (isAdmin){
+            return commentRepository.findByPostIdForAdmin(postId);
+        }
 
         // 2) CommentRepository 에서 postId 기준으로 댓글 목록 조회
         //    Soft Delete(@Where(is_deleted = false)) 덕분에 삭제된 댓글은 자동으로 제외됨
@@ -133,9 +144,40 @@ public class CommentService {
         반환값
         - 해당 ID의 Comment 엔티티 (없으면 예외 발생)
      */
-    public Comment getComment(Long commentId) {
+    public Object getComment(Long commentId, CustomUserDetails userDetails) {
 
         // ID 기준으로 댓글 조회, 없으면 예외 발생
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
+
+        // ADMIN 여부 판별
+        boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        // 삭제된(User SoftDelete) 데이터 조회는 관리자만 가능
+        // 관리자 응답은 authorId 중심 DTO (nickname 접근 제거)
+        if (isAdmin) {
+            return CommentAdminResponseDto.from(comment);
+        }
+        /*
+            일반 사용자 경로에서는 nickname을 포함한 CommentResponseDto를 사용
+            - 작성자(User)가 SoftDelete되어 @Where에 의해 조회 불가한 경우
+              CommentResponseDto.from(comment)에서 nickname 접근 시 LazyInitializationException이 발생할 수 있음
+            - 이를 방지하기 위해 먼저 작성자 존재 여부를 userRepository로 검증
+              (@Where가 적용되므로 삭제된 User는 여기서 조회 실패)
+         */
+            Long authorId = comment.getAuthor() != null ? comment.getAuthor().getId() : null;
+            if (authorId == null) {
+                throw new IllegalArgumentException("작성자를 찾을 수 없습니다. id=null");
+            }
+
+            userRepository.findById(authorId)
+                    .orElseThrow(() -> new IllegalArgumentException("작성자를 찾을 수 없습니다. id=" + authorId));
+
+            return CommentResponseDto.from(comment);
+        }
+
+    public Comment getCommentEntity(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
     }

@@ -44,7 +44,7 @@ public class UiCommentController { // 댓글 UI 요청을 처리하는 컨트롤
         }
 
         // 2) 댓글 조회(내용을 edit 폼에 채우기 위함)
-        Comment comment = commentService.getComment(commentId);
+        Comment comment = commentService.getCommentEntity(commentId);
 
         model.addAttribute("comment", comment);
         model.addAttribute("commentId", commentId);

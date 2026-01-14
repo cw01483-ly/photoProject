@@ -76,6 +76,15 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 """)
     List<Comment> findByPostIdWithAuthor(@Param("postId") Long postId);
 
+    // 관리자 전용 댓글 목록 조회 (JOIN 없이 조회)
+    @Query("""
+    SELECT c
+    FROM Comment c
+    WHERE c.post.id = :postId
+    ORDER BY c.id DESC
+""")
+    List<Comment> findByPostIdForAdmin(@Param("postId") Long postId);
+
     /* 삭제여부 무시 후 단건 조회 (내부 확인용, @Where 우회)
         *Comment 엔티티의 @Where(clause = "is_deleted = false")가 적용
             >> JPQL/메서드 쿼리로는 기본적으로 조회 불가

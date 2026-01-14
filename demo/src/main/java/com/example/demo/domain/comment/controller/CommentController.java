@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.domain.comment.dto.CommentAdminResponseDto;
 
 import java.util.List;
 
@@ -55,12 +56,25 @@ public class CommentController {
         - 반환: 해당 게시글에 달린 댓글 목록(List<CommentResponseDto>)
      */
     @GetMapping("/posts/{postId}/comments")   // 게시글 기준 댓글 목록 조회 엔드포인트
-    public ResponseEntity<ApiResponse<List<CommentResponseDto>>> getCommentsByPost(
-            // 반환 타입을 ApiResponse<List<CommentResponseDto>>로 변경
-            @PathVariable Long postId   // URL 경로에서 게시글 ID 추출
+    public ResponseEntity<ApiResponse<List<?>>> getCommentsByPost( // 관리자/일반 응답 DTO 변경가능성에 따른 와일드카드 사용
+            @PathVariable Long postId,   // URL 경로에서 게시글 ID 추출
+            @AuthenticationPrincipal CustomUserDetails userDetails // 관리자 여부 판별을 위해 주입
     ){
+        // ADMIN 여부 판별 (userDetails가 null이면 비회원/익명 요청)
+        boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
         // 1) 서비스 계층에서 댓글 엔티티 목록 조회, 특정 게시글에 달린 모든 댓글 엔티티 목록을 조회
-        List<Comment> comments = commentService.getCommentsByPost(postId);
+        List<Comment> comments = commentService.getCommentsByPost(postId, userDetails);
+
+        // 관리자 조회는 authorId 중심 DTO로 반환 (nickname 의존 제거)
+        if (isAdmin) {
+            List<CommentAdminResponseDto> responseList = comments.stream()
+                    .map(CommentAdminResponseDto::from)
+                    .toList();
+            return ResponseEntity.ok(
+                    ApiResponse.success(responseList, "댓글 목록 조회 성공"));
+        }
         // 2) 엔티티 목록 > 응답 DTO 목록으로 반환, 엔티티 리스트를 스트림으로 변환
         List<CommentResponseDto> responseList = comments.stream()
                 .map(CommentResponseDto::from)// CommentResponseDto.from(comment) 을 각 요소에 적용
@@ -111,22 +125,19 @@ public class CommentController {
         - 반환: CommentResponseDto
      */
     @GetMapping("/comments/{commentId}") // 댓글 단건 조회 엔드포인트
-    public ResponseEntity<ApiResponse<CommentResponseDto>> getComment(
-            // 반환 타입을 ApiResponse<CommentResponseDto>로 변경
-            @PathVariable Long commentId  // URL 경로에서 댓글 ID 추출
-    ) {
+    public ResponseEntity<ApiResponse<Object>> getComment(
+            @PathVariable Long commentId,  // URL 경로에서 댓글 ID 추출
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        // 서비스에서 관리자/일반 정책에 맞는 DTO를 직접 반환
+        Object responseDto = commentService.getComment(commentId, userDetails);
 
-        // 1) 서비스 계층에서 댓글 엔티티 조회, ID로 댓글 엔티티 단건 조회
-        Comment comment = commentService.getComment(commentId);
-
-        // 2) 엔티티를 응답 DTO로 변환, Comment 엔티티를 CommentResponseDto로 변환
-        CommentResponseDto responseDto = CommentResponseDto.from(comment);
-
-        // 3) HTTP 200(OK) 상태 코드와 함께 반환
+        // HTTP 200(OK) 상태 코드와 함께 반환
         return ResponseEntity.ok( // 200 OK 응답
                 ApiResponse.success(responseDto, "댓글 단건 조회 성공"));
-                // 단건 댓글 DTO를 ApiResponse로 감싸서 반환
+        // 단건 댓글 DTO를 ApiResponse로 감싸서 반환
     }
+
 
     /*
         댓글 수정
