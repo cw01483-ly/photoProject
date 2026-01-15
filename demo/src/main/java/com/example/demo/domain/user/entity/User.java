@@ -9,7 +9,6 @@ import lombok.*;
 import com.example.demo.domain.user.role.UserRole;
 import com.fasterxml.jackson.annotation.JsonIgnore; //비밀번호 JSON직렬화 방지
 import java.time.LocalDateTime;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 

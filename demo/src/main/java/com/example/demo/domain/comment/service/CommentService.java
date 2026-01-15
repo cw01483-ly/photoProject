@@ -31,7 +31,7 @@ import java.util.List;
     3) 특정 사용자가 작성한 댓글 목록 조회 (getCommentsByAuthor)
     4) 댓글 단건 조회 (getComment)
     5) 댓글 수정 (updateComment)
-    6) 댓글 삭제 (deleteComment) -> 실제로는 Soft Delete(@SQLDelete)로 논리 삭제
+    6) 댓글 삭제 (deleteComment)
 */
 public class CommentService {
 
