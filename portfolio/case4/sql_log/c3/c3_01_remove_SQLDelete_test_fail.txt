@@ -1,0 +1,228 @@
+lys@DESKTOP-A5GME2Q MINGW64 ~/Desktop/photoProject/demo (master)
+$ ./gradlew test
+
+> Task :compileJava
+C:\Users\lys\Desktop\photoProject\demo\src\main\java\com\example\demo\domain\pos
+t\entity\Post.java:18: warning: Generating equals/hashCode implementation but wi
+thout a call to superclass, even though this class does not extend java.lang.Obj
+ect. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your t
+ype.
+@EqualsAndHashCode(of = "id") // id ?꾨뱶留뚯쑝濡??숈씪??鍮꾧탳 (?뷀떚??猷⑦봽 諛
+⑹?)
+^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot lo
+ader classes because bootstrap classpath has been appended
+
+> Task :test
+
+CommentControllerTest > ?볤? ??젣 ?깃났 : ?묒꽦?먭? ?먯떊???볤?????젣?섎㈃ 200 O
+K? ?깃났 硫붿떆吏 諛섑솚 FAILED
+    org.opentest4j.AssertionFailedError at CommentControllerTest.java:526
+
+CommentControllerTest > 愿由ъ옄 沅뚰븳 ?뚯뒪??: ?볤? ??젣 ?깃났 FAILED
+    org.opentest4j.AssertionFailedError at CommentControllerTest.java:749
+<===
+PostControllerTest > 寃뚯떆湲 醫뗭븘??媛쒖닔 議고쉶 ?깃났 醫뗭븘??1媛쒖씤 寃뚯
+떆湲??likeCount=1 諛섑솚 FAILEDmple.demo.domain.post.controller.PostController
+    org.springframework.dao.DataIntegrityViolationException at PostControllerTes
+t.java:632
+        Caused by: org.hibernate.exception.ConstraintViolationException at PostC
+ontrollerTest.java:632
+            Caused by: java.sql.SQLIntegrityConstraintViolationException at Post
+ControllerTest.java:632
+<==
+PostControllerTest > ?묒꽦?먮퀎 議고쉶 ?깃났 : GET /api/posts/author/{authorId}
+?몄텧 ???대떦 ?묒꽦?먯쓽 寃뚯떆湲留??섏씠吏뺥빐??諛섑솚 FAILED
+    org.springframework.dao.DataIntegrityViolationException at PostControllerTes
+t.java:263
+        Caused by: org.hibernate.exception.ConstraintViolationException at PostC
+ontrollerTest.java:263
+            Caused by: java.sql.SQLIntegrityConstraintViolationException at Post
+ControllerTest.java:263
+
+PostControllerTest > 寃뚯떆湲 醫뗭븘???좉? 2???몄텧 ??醫뗭븘?붽? 痍⑥냼?섍퀬 lik
+eCount=0 諛섑솚 FAILEDst com.example.demo.domain.post.controller.PostController
+    org.springframework.dao.DataIntegrityViolationException at PostControllerTes
+t.java:705
+        Caused by: org.hibernate.exception.ConstraintViolationException at PostC
+ontrollerTest.java:705
+            Caused by: java.sql.SQLIntegrityConstraintViolationException at Post
+ControllerTest.java:705
+
+PostControllerTest > 寃뚯떆湲 醫뗭븘???좉? ?깃났 : 泥섏쓬 ?몄텧 ??liked=true, l
+ikeCount=1 諛섑솚 FAILED com.example.demo.domain.post.controller.PostController
+    org.springframework.dao.DataIntegrityViolationException at PostControllerTes
+t.java:563
+        Caused by: org.hibernate.exception.ConstraintViolationException at PostC
+ontrollerTest.java:563
+            Caused by: java.sql.SQLIntegrityConstraintViolationException at Post
+ControllerTest.java:563
+
+UserControllerTest > ?됰꽕???섏젙 ?ㅽ뙣 : 以묐났 ?됰꽕?꾩쑝濡?PATCH ??400怨??ㅽ
+뙣 ?묐떟 諛섑솚 FAILEDst com.example.demo.domain.user.controller.UserControllerr
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝媛???ㅽ뙣 : ?섎せ???대찓???뺤떇?쇰줈 ?붿껌 ??400 Bad
+Request? ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?됰꽕???섏젙 ?깃났 : 愿由ъ옄媛 PATCH /api/users/{id}/nick
+name ?몄텧 ??200怨?蹂寃쎈맂 ?됰꽕??諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝媛???ㅽ뙣 : username??怨듬갚????400 Bad Request? ?ㅽ
+뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?대찓???섏젙 ?ㅽ뙣 : ?섎せ???대찓???뺤떇, 400 Bad Request?
+ ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionErest? ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionErnError at UserControllerTest.java:99
+
+UserControllerTest > ?⑥씪 議고쉶 ?깃났 : 愿由ъ옄 GET /api/users/{id} ?몄텧 ??20
+0怨?UserResponseDto 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+<=
+UserControllerTest > 濡쒓렇???깃났 : POST /api/users/login ?몄텧 ??200怨?UserRes
+ponseDto 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?⑥씪 議고쉶 ?ㅽ뙣 : ?쇰컲 USER媛 ?ㅻⅨ ?ъ슜??id濡?GET /api/
+users/{id} ?몄텧 ??403 Forbidden 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝 ??젣 ?ㅽ뙣 : 議댁옱?섏? ?딅뒗 ID濡?DELETE /api/users/
+{id} ?몄텧 ??404? ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝媛???깃났 : ?щ컮瑜??붿껌 JSON 蹂대궡硫?201怨?UserResp
+onseDto 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > username 議고쉶 ?ㅽ뙣 : 議댁옱?섏? ?딅뒗 username?쇰줈 GET
+/api/users/username/{username} ?몄텧 ??404? ?ㅽ뙣 ?묐떟 諛섑솚 ername} ?몄텧 ??
+404? ?ㅽ뙣 ?묐떟 諛섑솚  FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?⑥씪 議고쉶 ?ㅽ뙣 : 議댁옱?섏? ?딅뒗 ID濡?GET /api/users/{i
+d} ?몄텧 ??404? ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝 ??젣 ?깃났 : 愿由ъ옄媛 DELETE /api/users/{id} ?몄텧
+ ??200怨?'?뚯썝 ??젣 ?깃났' 硫붿떆吏 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > 濡쒓렇???ㅽ뙣 : username 怨듬갚?대㈃ 400 Bad Request? ?ㅽ
+뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > username 議고쉶 ?깃났 : 愿由ъ옄媛 GET /api/users/username
+/{username} ?몄텧 ??200怨?UserResponseDto 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?꾩껜 議고쉶 ?깃났 : 愿由ъ옄媛 GET /api/users ?몄텧 ??200
+怨??ъ슜??紐⑸줉 諛섑솚 FAILED0怨??ъ슜??紐⑸줉 諛섑솚 FAILED[39m
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?대찓???섏젙 ?ㅽ뙣 : ?쇰컲 USER媛 ?ㅻⅨ ?ъ슜???대찓??PATCH
+??沅뚰븳 遺議깆쑝濡??ㅽ뙣 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?대찓???섏젙 ?ㅽ뙣 : 以묐났 ?대찓?쇰줈 PATCH ??400怨??ㅽ뙣
+?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?됰꽕???섏젙 ?ㅽ뙣 : nickname 怨듬갚, 400 Bad Request? ?ㅽ
+뙣 ?묐떟 諛섑솚 FAILEDst com.example.demo.domain.user.controller.UserController
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > 濡쒓렇???ㅽ뙣 : ?녿뒗 username?쇰줈 濡쒓렇????401怨?硫붿떆
+吏 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > 濡쒓렇???ㅽ뙣 : 鍮꾨?踰덊샇 ?由щ㈃ 401怨?硫붿떆吏 諛섑솚
+FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?됰꽕???섏젙 ?ㅽ뙣 : ?쇰컲 USER媛 ?ㅻⅨ ?ъ슜???됰꽕??PATCH
+??沅뚰븳 遺議깆쑝濡??ㅽ뙣 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝媛???ㅽ뙣 : 鍮꾨?踰덊샇 洹쒖튃 ?꾨컲 ??400 BadRequest
+, ?ㅽ뙣 ?묐떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?대찓?펤rollerTest.java:99
+
+UserControllerTest > ?대찓?폓??섏젙 ?깃났 : 愿由ъ옄媛 PATCH /api/users/{id}/em
+ail ?몄텧 ??200怨?蹂寃쎈맂 ?대찓??諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?꾩껜 議고쉶 ?ㅽ뙣 : ?쇰컲 USER媛 GET /api/users ?몄텧 ??4
+03 Forbidden 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?⑥씪 ?ъ슜??議고쉶 ?ㅽ뙣 - ?몄쬆 ?놁쓬 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?⑥씪 ?ъ슜??議고쉶 ?깃났 - JWT ?몄쬆 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+rController
+UserControllerTest > 濡쒓렇???ㅽ뙣 : Pw 怨듬갚?대㈃ 400 Bad Request? ?ㅽ뙣 ?묐
+떟 諛섑솚 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserControllerTest > ?뚯썝 ??젣 ?ㅽ뙣 : ?쇰컲 USER媛 ?ㅻⅨ ?ъ슜??DELETE ??沅뚰븳
+ 遺議깆쑝濡??ㅽ뙣 FAILED
+    java.lang.AssertionError at UserControllerTest.java:99
+
+UserServiceTest > ?뚯썝 ??젣 ?깃났 : 議댁옱?섎뒗 ID ??젣 ??DB?먯꽌 ?쒓굅 FAILED
+    org.opentest4j.AssertionFailedError at UserServiceTest.java:449
+
+2026-01-16T00:15:54.344+09:00  INFO 12052 --- [ionShutdownHook] j.LocalContainer
+EntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit
+ 'default'
+2026-01-16T00:15:54.346+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-16T00:15:54.352+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-01-16T00:15:54.366+09:00  INFO 12052 --- [ionShutdownHook] j.LocalContainer
+EntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit
+ 'default'
+2026-01-16T00:15:54.366+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-01-16T00:15:54.371+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-2 - Shutdown completed.
+2026-01-16T00:15:54.376+09:00  INFO 12052 --- [ionShutdownHook] j.LocalContainer
+EntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit
+ 'default'
+2026-01-16T00:15:54.376+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2026-01-16T00:15:54.381+09:00  INFO 12052 --- [ionShutdownHook] com.zaxxer.hikar
+i.HikariDataSource       : HikariPool-3 - Shutdown completed.
+
+> Task :test
+
+81 tests completed, 36 failed
+
+> Task :test FAILED
+
+[Incubating] Problems report is available at: file:///C:/Users/lys/Desktop/photo
+Project/demo/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///C:/Users/lys/Desktop/phot
+oProject/demo/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 4m 19s
+4 actionable tasks: 3 executed, 1 up-to-date
+
