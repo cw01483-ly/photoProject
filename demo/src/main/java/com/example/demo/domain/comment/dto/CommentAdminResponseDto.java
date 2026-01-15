@@ -13,7 +13,7 @@ import lombok.Getter;
 */
 @Getter
 @AllArgsConstructor
-public class CommentAdminResponseDto {
+public class CommentAdminResponseDto implements CommentViewDto{
 
     private Long commentId; // 댓글 ID
     private Long postId;    // 게시글 ID

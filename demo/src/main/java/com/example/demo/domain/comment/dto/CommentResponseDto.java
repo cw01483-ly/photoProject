@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 // 기본 생성자를 protected로 생성하여 외부 직접 생성은 막고, 프레임워크 사용만 허용
-public class CommentResponseDto {
+public class CommentResponseDto implements CommentViewDto{
     // 클라이언트로 응답 내려줄 때 사용할 DTO
 
     private Long id; //댓글 PK

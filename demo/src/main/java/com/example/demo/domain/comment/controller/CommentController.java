@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.example.demo.domain.comment.dto.CommentAdminResponseDto;
+import com.example.demo.domain.comment.dto.CommentViewDto;
 
 import java.util.List;
 
@@ -56,7 +57,7 @@ public class CommentController {
         - 반환: 해당 게시글에 달린 댓글 목록(List<CommentResponseDto>)
      */
     @GetMapping("/posts/{postId}/comments")   // 게시글 기준 댓글 목록 조회 엔드포인트
-    public ResponseEntity<ApiResponse<List<?>>> getCommentsByPost( // 관리자/일반 응답 DTO 변경가능성에 따른 와일드카드 사용
+    public ResponseEntity<ApiResponse<List<CommentViewDto>>> getCommentsByPost( // 관리자/일반 응답 DTO 변경가능성에 따른 와일드카드 사용
             @PathVariable Long postId,   // URL 경로에서 게시글 ID 추출
             @AuthenticationPrincipal CustomUserDetails userDetails // 관리자 여부 판별을 위해 주입
     ){
@@ -64,25 +65,28 @@ public class CommentController {
         boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
-        // 1) 서비스 계층에서 댓글 엔티티 목록 조회, 특정 게시글에 달린 모든 댓글 엔티티 목록을 조회
-        List<Comment> comments = commentService.getCommentsByPost(postId, userDetails);
-
-        // 관리자 조회는 authorId 중심 DTO로 반환 (nickname 의존 제거)
+        // ADMIN은 엔티티 조회 후 Admin DTO로 변환
         if (isAdmin) {
-            List<CommentAdminResponseDto> responseList = comments.stream()
+            List<Comment> comments = commentService.getCommentsByPostForAdmin(postId);
+            List<CommentViewDto> responseList = comments.stream()
                     .map(CommentAdminResponseDto::from)
+                    .map(dto -> (CommentViewDto) dto)
                     .toList();
+
             return ResponseEntity.ok(
-                    ApiResponse.success(responseList, "댓글 목록 조회 성공"));
+                    ApiResponse.success(responseList, "댓글 목록 조회 성공")
+            );
         }
-        // 2) 엔티티 목록 > 응답 DTO 목록으로 반환, 엔티티 리스트를 스트림으로 변환
-        List<CommentResponseDto> responseList = comments.stream()
-                .map(CommentResponseDto::from)// CommentResponseDto.from(comment) 을 각 요소에 적용
-                .toList();// 변환된 DTO들을 리스트로 수집
-        // 3) HTTP 200(OK) 상태 코드와 함께 댓글 목록 반환
-        return ResponseEntity.ok( // 200 OK 상태 코드로 응답
-                ApiResponse.success(responseList, "댓글 목록 조회 성공"));
-        // 댓글 목록 DTO 리스트를 ApiResponse로 감싸서 반환
+        //  USER/비회원은 엔티티 조회 후 User DTO로 변환
+        List<Comment> comments = commentService.getCommentsByPostForUser(postId);
+        List<CommentViewDto> responseList = comments.stream()
+                .map(CommentResponseDto::from)
+                .map(dto -> (CommentViewDto) dto)
+                .toList();
+
+        return ResponseEntity.ok(
+                ApiResponse.success(responseList, "댓글 목록 조회 성공")
+        );
     }
 
     /* 특정 게시글 댓글 목록 페이징 조회
@@ -90,33 +94,40 @@ public class CommentController {
         - 요청 파라미터 :
             page : 조회할 페이지 번호 (프론트1시작, 백엔드는0으로 맞춰줄것)
             size : 한 페이지에 몇 개의 댓글 가져올 지( 기본 10 )
-        - 반환 : Page<CommentResponseDto>
+        - 반환 : Page<CommentViewDto>
                 (댓글 데이터 + 페이징 메타정보 포함)
     */
     @GetMapping("/posts/{postId}/comments/paging") //게시글 기준 댓글페이징 조회
-    public ResponseEntity<ApiResponse<Page<CommentResponseDto>>> getCommentsByPostWithPaging(
-            // 반환 타입을 ApiResponse<Page<CommentResponseDto>>로 변경
+    public ResponseEntity<ApiResponse<Page<CommentViewDto>>> getCommentsByPostWithPaging(
             @PathVariable Long postId,// URL 경로에서 게시글 ID 추출
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ){
         // 0) 스프링에게 페이지 초기값 0으로 변환
         int zeroBasedPage = Math.max(0, page - 1);
         //프론트가 실수로 0보냈을 때 방지, 0이나 음수면 자동으로 0페이지로 고정
-        // 1) 서비스 계층에서 페이징 된 댓글 엔티티 페이지 조회
+        // 1) ADMIN 판별
+        boolean isAdmin = userDetails != null &&
+                userDetails.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        // 2) 서비스 계층 호출 USER/ADMIN 분기, DTO 선택은 Controller
         Page<Comment> commentPage =
                 commentService.getCommentsByPostWithPaging(
-                postId, zeroBasedPage, size); //zeroBasedPage 사용
-        /* 2) Page<Comment> -> Page<CommentResponseDto> 로 변환
-            Page 타입에는 map(Function)을 제공해서 요소 타입만 바꾸고
-            페이지 정보(전체 개수, 전체 페이지 수 등)는 그대로 유지
-        */
-        Page<CommentResponseDto> responsePage = commentPage
-                .map(CommentResponseDto::from);
-        // 3) HTTP 200(OK) 상태 코드와 함께 Page<CommentResponseDto> 반환
-        return ResponseEntity.ok( // 200 OK 상태 코드로 응답
+                        postId, zeroBasedPage, size);
+        // 3) 엔티티(Page<Comment>) → DTO(Page<CommentViewDto>) 변환
+        Page<CommentViewDto> responsePage = commentPage.map(comment -> {
+            if (isAdmin) {
+                // 관리자: User JOIN / nickname 접근 없는 Admin DTO
+                return (CommentViewDto) CommentAdminResponseDto.from(comment);
+            }
+            // 일반 사용자 UI 표시용 DTO
+            return (CommentViewDto) CommentResponseDto.from(comment);
+        });
+        // 4) 공통 ApiResponse로 감싸서 반환
+        // 데이터 : Page<CommentViewDto>, 메시지 : 조회 성공 메시지
+        return ResponseEntity.ok(
                 ApiResponse.success(responsePage, "댓글 페이징 조회 성공"));
-                //  페이징된 댓글 DTO 페이지를 ApiResponse로 감싸서 반환
         }
 
     /*
@@ -125,17 +136,41 @@ public class CommentController {
         - 반환: CommentResponseDto
      */
     @GetMapping("/comments/{commentId}") // 댓글 단건 조회 엔드포인트
-    public ResponseEntity<ApiResponse<Object>> getComment(
+    public ResponseEntity<ApiResponse<CommentViewDto>> getComment(
             @PathVariable Long commentId,  // URL 경로에서 댓글 ID 추출
             @AuthenticationPrincipal CustomUserDetails userDetails
     ){
-        // 서비스에서 관리자/일반 정책에 맞는 DTO를 직접 반환
-        Object responseDto = commentService.getComment(commentId, userDetails);
+        /*
+        - ADMIN : SoftDelete User여도 조회 가능 >> User JOIN 불필요
+        - USER  : SoftDelete User 댓글은 숨김 >> author JOIN FETCH + 없으면 404
+         */
+        // ADMIN 판별
+        boolean isAdmin = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
-        // HTTP 200(OK) 상태 코드와 함께 반환
-        return ResponseEntity.ok( // 200 OK 응답
-                ApiResponse.success(responseDto, "댓글 단건 조회 성공"));
-        // 단건 댓글 DTO를 ApiResponse로 감싸서 반환
+        // 2) ADMIN 경로
+        if (isAdmin) {
+            // ADMIN은 nickname 접근이 없으므로 일반 엔티티 조회로 충분
+            Comment comment = commentService.getCommentEntity(commentId);
+            CommentViewDto dto = CommentAdminResponseDto.from(comment);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success(dto, "댓글 단건 조회 성공")
+            );
+        }
+
+        // 3) USER 경로
+        /*
+        USER는 nickname(author) 접근이 필요, author JOIN FETCH 전용 메서드 사용
+        - SoftDelete User면 JOIN 결과 자체가 없어져 null
+        - 이 경우 404로 처리됨 (Service에서 예외 발생)
+        */
+        Comment comment = commentService.getCommentForUser(commentId);
+        CommentViewDto dto = CommentResponseDto.from(comment);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(dto, "댓글 단건 조회 성공")
+        );
     }
 
 
