@@ -32,7 +32,6 @@ import org.hibernate.annotations.Where;
                 @UniqueConstraint(name = "uk_users_email", columnNames = "email")
         }
 )
-@SQLDelete(sql = "UPDATE users SET is_deleted = true WHERE id = ?")
 @Where(clause = "is_deleted = false")
 public class User extends BaseTimeEntity { //BaseTimeEntity 상속받아 시간설정 자동관리
     @Id //기본키(PK) 지정

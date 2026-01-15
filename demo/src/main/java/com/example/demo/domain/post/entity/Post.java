@@ -23,11 +23,6 @@ import org.hibernate.annotations.Where;
                 @Index(name = "idx_posts_title", columnList = "title") // 제목 기준 검색 인덱스
         }
 )
-@SQLDelete(sql = "UPDATE posts SET is_deleted = true WHERE id = ?") //삭제시 DELETE명령을 UPDATE로 바꿔 실행하기
-// delete 실행 시 실제 삭제 대신 is_deleted=true로 업데이트
-/* 사용자에겐 보이지 않고 운영자에겐 보이게 함
-    DB에서 삭제되면 복원 불가능, 이로 인해 통계,로그감시, 혹은 참조 무결성 문제에 영향을 끼치게 됨
-    >> 삭제 명령이 들어오면 UPDATE 문으로 바꿔서 실행시킴*/
 @Where(clause = "is_deleted = false")// 조회할 때 항상 WHERE is_deleted=false 조건을 자동으로 붙이기
 /* 항상 is_deleted=false인 데이터만 조회되도록 필터링
     >> 조회할 때 삭제되지 않은(is_deleted = false)데이터만 보여줘라!

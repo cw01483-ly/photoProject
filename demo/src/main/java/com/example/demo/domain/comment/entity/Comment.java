@@ -15,13 +15,6 @@ import org.hibernate.annotations.Where;
 @Table(name = "comments")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) //파라미터 없는 기본 생성자 자동생성
-@SQLDelete(sql = "UPDATE comments SET is_deleted = true WHERE id = ?")
-/*     SQLDelete
-        - delete 쿼리 호출 시 실제 DELETE FROM이 아닌
-            UPDATE comments SET is_deleted = true WHERE id = ?
-            를 대신 실행하게 만들어주는 Hibernate 기능
-        - is_deleted 컬럼을 true 로 업데이트하여 "논리 삭제" 구현
-*/
 @Where(clause = "is_deleted = false")
 /*      @Where
          - Comment 엔티티 조회 시 항상 뒤에 붙을 조건절 지정
@@ -73,7 +66,6 @@ public class Comment extends BaseTimeEntity {
         논리 삭제 수행 메서드
         - 실제 DB 레코드를 물리적으로 삭제하지 않고
           isDeleted 값을 true 로 바꾸어 "삭제된 것처럼" 처리
-        - @SQLDelete 와 함께 동작하면서
           delete 호출 시에도 is_deleted 만 변경되도록 설계
     */
     public void delete() {
