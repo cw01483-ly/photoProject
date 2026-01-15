@@ -209,26 +209,26 @@ public class CommentService {
     @Transactional
     public void deleteComment(Long commentId, CustomUserDetails userDetails) {
 
-        Long userId = userDetails.getId(); // ✅ 인증된 사용자 id
+        Long userId = userDetails.getId(); //  인증된 사용자 id
         //  ADMIN 여부는 principal 권한으로 판별 (DB 재조회 제거)
         boolean isAdmin = userDetails.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
-        // 1) 삭제할 댓글을 조회 (없으면 예외)
-        Comment comment = commentRepository.findByIdWithAuthor(commentId);
-        if (comment == null) {
-            throw new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId);
-        }
+        // JOIN FETCH(author)로 찾지 말고, 그냥 findById로 찾기 (User JOIN 없음)
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다. id=" + commentId));
 
-        // 2) 작성자 본인 검증
-        if (!comment.getAuthor().getId().equals(userId) && !isAdmin) {
-            throw new AccessDeniedException("댓글 작성자만 삭제할 수 있습니다.");
+        // 관리자면 작성자 검증 자체를 하지 않음(= author 로딩도 안 함)
+        if (!isAdmin) {
+            if (!comment.getAuthor().getId().equals(userId)) {
+                throw new AccessDeniedException("댓글 작성자만 삭제할 수 있습니다.");
+            }
         }
-        /* 3) 레포지토리의 delete 메서드 호출
-              @SQLDelete 설정 덕분에 실제로는
-              UPDATE comments SET is_deleted = true WHERE id = ?
-              와 같은 쿼리가 실행됨
-        */
-        commentRepository.delete(comment);
+        /* 삭제
+            - Comment 엔티티 도메인 메서드를 통해 SoftDelete 수행
+            - isDeleted = true 로 상태 변경
+            - 트랜잭션 종료 시 Dirty Checking 으로 UPDATE 반영
+         */
+        comment.delete();
     }
 }
