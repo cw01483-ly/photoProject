@@ -1,4 +1,4 @@
-# C-3 SoftDelete 경로 점검 (After)
+## Case4 / c3 — SoftDelete 경로 점검 (After)
 
 ## 1) 목적
 

@@ -1,4 +1,4 @@
-# C-3 SoftDelete 경로 점검 (Before)
+## Case4 / c3 — SoftDelete 경로 점검 (Before)
 
 ## 1) 목적
 SoftDelete 실행 “트리거 경로”가 엔티티별로 혼재되어 있어,
