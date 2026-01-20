@@ -80,6 +80,41 @@ public class PostService {
         return PostResponseDto.from(saved, 0L); //새로만든 글은 좋아요 없다고 보고 likeCount 0으로 세팅
     }
 
+    // 1-1 게시글 생성 (이미지 포함)
+    @Transactional
+    public PostResponseDto createPost(Long authorId, String title, String content, MultipartFile image){
+        // 작성자 확인(회원만)
+        User author = userRepository.findById(authorId)
+                .orElseThrow(() -> new IllegalArgumentException("작성자를 찾을 수 없습니다. id=" + authorId));
+
+        //displayNumber 가장 큰 수 DB에서 찾기, softDelete 자동 제외
+        Long maxNumber = postRepository.findMaxDisplayNumber();
+
+        // 추가될 게시글 번호 계산, 생성
+        Long nextNumber = maxNumber +1;
+
+        // 이미지 저장 (파일 없으면 null유지)
+        String savePath = null;
+        if (image != null && !image.isEmpty()){
+            savePath = fileStorageService.save(image); // ex) posts/uuid.jpg
+        }
+
+        // Builder사용 게시글 생성
+        Post post = Post.builder()
+                .title(title)
+                .content(content)
+                .author(author)
+                .displayNumber(nextNumber)
+                .imagePath(savePath)
+                .build();
+
+        // DB 저장 >> 저장된 엔티티 반환
+        Post saved = postRepository.save(post);
+
+        // 엔티티를 DTO로 변환 , Controller에 반환
+        return PostResponseDto.from(saved, 0L); //새로만든 글은 좋아요 없다고 보고 likeCount 0으로 세팅
+    }
+
     // 2. 게시글 단건 조회 + 조회수 증가
     @Transactional //조회수 증가 때문에 데이터 변경 필요
     public PostResponseDto getPostById(Long postId){

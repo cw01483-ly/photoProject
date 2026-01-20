@@ -22,6 +22,7 @@ public class PostDetailResponseDto {
     private String authorName; //User nickname
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String imagePath;
 
     // 서비스 계층에서 최신 10개만 추려서 댓글목록을 담는 필드로 설계
     private List<CommentResponseDto> latestComments;
@@ -48,7 +49,8 @@ public class PostDetailResponseDto {
             List<CommentResponseDto> latestComments,
             long totalCommentsCount,
             int latestCommentsSize,
-            long likeCount
+            long likeCount,
+            String imagePath
     ) {
         this.id = id;
         this.title = title;
@@ -62,6 +64,7 @@ public class PostDetailResponseDto {
         this.totalCommentsCount = totalCommentsCount;
         this.latestCommentsSize = latestCommentsSize;
         this.likeCount = likeCount;
+        this.imagePath = imagePath;
     }
 
 
@@ -107,6 +110,7 @@ public class PostDetailResponseDto {
                 .totalCommentsCount(totalCommentsCount)   // 전체 댓글 개수 설정
                 .latestCommentsSize(latestCommentsSize)   // 이번 응답에 포함된 댓글 개수 설정
                 .likeCount(likeCount)                    // 게시글 좋아요 개수 설정
+                .imagePath(post.getImagePath())
                 .build();
         // 빌더에 채워진 값들을 사용해서 최종 PostDetailResponseDto 객체를 생성하여 반환
     }

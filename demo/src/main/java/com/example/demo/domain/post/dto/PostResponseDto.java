@@ -23,6 +23,7 @@ public class PostResponseDto {
     private LocalDateTime createdAt; // 생성 시간
     private LocalDateTime updatedAt; // 마지막 수정 시간
     private long likeCount; // 해당 게시글 Like 수
+    private String imagePath; // 게시글 이미지 경로
 
     @Builder
     private PostResponseDto(
@@ -34,7 +35,8 @@ public class PostResponseDto {
             String authorName,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            long likeCount
+            long likeCount,
+            String imagePath
     ) {
         this.id = id;
         this.displayNumber = displayNumber;
@@ -45,6 +47,7 @@ public class PostResponseDto {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.likeCount = likeCount;
+        this.imagePath = imagePath;
     }
 
     //엔티티인 Post를 DTO로 변환하는 정적 메서드
@@ -65,6 +68,7 @@ public class PostResponseDto {
                 .createdAt(post.getCreatedAt())  // BaseTimeEntity에서 상속된 작성시각
                 .updatedAt(post.getUpdatedAt())  // BaseTimeEntity에서 상속된 수정시각
                 .likeCount(likeCount) //Like 개수 설정
+                .imagePath(post.getImagePath())
                 .build();
     }
 

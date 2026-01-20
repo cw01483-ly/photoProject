@@ -58,11 +58,12 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
     public String createPostFromUi(
             @org.springframework.security.core.annotation.AuthenticationPrincipal CustomUserDetails principal,
             @RequestParam("title") String title, // form input name="title"
-            @RequestParam("content") String content // textarea name="content"
+            @RequestParam("content") String content, // textarea name="content"
+            @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         Long authorId = principal.getId(); // 로그인 사용자 ID
 
-        PostResponseDto created = postService.createPost(authorId, title, content); // API와 동일 서비스 호출
+        PostResponseDto created = postService.createPost(authorId, title, content, image); // API와 동일 서비스 호출
 
         return "redirect:/ui/posts/" + created.getId(); // 생성 후 상세로 이동
     }
