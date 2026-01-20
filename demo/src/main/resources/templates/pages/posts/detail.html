@@ -72,6 +72,13 @@
                      alt="게시글 이미지"
                      style="max-width:100%; height:auto; border:1px solid #eee; border-radius:8px;">
             </div>
+            <!-- 좋아요 토글 (로그인 사용자만 노출) -->
+            <form th:if="${viewerId != null}"
+                  th:action="@{/ui/posts/{id}/likes(id=${postId})}"
+                  method="post"
+                  style="display:inline;">
+                <button type="submit">🤍</button>
+            </form>
         </div>
 
         <hr class="mt-4" style="border:none; border-top:1px solid #eee;">

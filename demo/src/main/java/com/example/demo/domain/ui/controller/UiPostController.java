@@ -3,6 +3,7 @@ package com.example.demo.domain.ui.controller; // UI(Thymeleaf) 전용 컨트롤
 import com.example.demo.domain.post.dto.PostDetailResponseDto;
 import com.example.demo.domain.post.dto.PostListResponseDto;
 import com.example.demo.domain.post.dto.PostResponseDto;
+import com.example.demo.domain.post.service.PostLikeService;
 import com.example.demo.domain.post.service.PostService;
 import com.example.demo.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.security.Principal;
 public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 컨트롤러
 
     private final PostService postService;
+    private final PostLikeService postLikeService;
 
     @GetMapping // GET /ui/posts
     public String listPage(  // 게시글 목록 화면
@@ -83,6 +85,28 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
         model.addAttribute("viewerId", viewerId);
         return "pages/posts/detail"; // templates/pages/posts/detail.html 로 이동
     }
+
+
+    // GET /ui/posts/{id}/refresh
+    // 좋아요 토글 후 재진입 전용 (조회수 증가 없음)
+    @GetMapping("/{id}/refresh")
+    public String detailPageWithoutViewIncrease(
+            @PathVariable("id") Long id,
+            Model model,
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        // 조회수 증가 없는 상세 조회
+        PostDetailResponseDto post = postService.getPostDetail(id);
+
+        model.addAttribute("post", post);
+        model.addAttribute("postId", id);
+
+        Long viewerId = (principal != null) ? principal.getId() : null;
+        model.addAttribute("viewerId", viewerId);
+
+        return "pages/posts/detail";
+    }
+
 
     @GetMapping("/{id}/edit") // GET /ui/posts/{id}/edit
     public String editFormPage(
@@ -151,6 +175,25 @@ public class UiPostController { // Posts(게시글) UI 화면 라우팅 담당 �
 
         // 4) 목록으로 이동
         return "redirect:/ui/posts";
+    }
+
+
+    // POST /ui/posts/{id}/likes  (UI에서 좋아요 토글)
+    @PostMapping("/{id}/likes")
+    public String toggleLikeFromUi(
+            @PathVariable("id") Long postId,
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        // 1) 비로그인 차단 (UI 패턴과 동일)
+        if (principal == null) {
+            return "redirect:/ui/auth/login?next=/ui/posts/" + postId;
+        }
+
+        // 2) 좋아요 토글 (서비스의 기존 토글 로직 재사용)
+        postLikeService.toggleLike(postId, principal.getId());
+
+        // 3) 다시 상세로 리다이렉트 (PRG)
+        return "redirect:/ui/posts/" + postId + "/refresh";
     }
 
 }
