@@ -47,6 +47,10 @@ dependencies {
     runtimeOnly  'io.jsonwebtoken:jjwt-impl:0.11.5'   // 실제 JWT 생성/검증 구현체
     runtimeOnly  'io.jsonwebtoken:jjwt-jackson:0.11.5' // JSON <-> 객체 변환용
     testImplementation 'com.h2database:h2' // 테스트에서만 H2 사용
+	// Spring Cloud AWS BOM (버전은 여기에서만 관리)
+	implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.4.2")
+	// S3 Starter (버전 표기 금지 - BOM이 관리)
+	implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
 }
 
 tasks.named('test') {

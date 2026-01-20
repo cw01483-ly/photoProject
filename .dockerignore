@@ -1,0 +1,19 @@
+# Gradle / build outputs
+**/build/
+**/.gradle/
+
+# IDE / OS
+**/.idea/
+**/.vscode/
+**/*.iml
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Logs
+**/*.log
+
+# Local env files (do not bake secrets into image)
+**/*.env
