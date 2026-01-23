@@ -14,6 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
         // 브라우저 요청: /posts/파일명
         // 실제 파일 위치: D:/upload/photoProject/posts/파일명
         registry.addResourceHandler("/posts/**")
-                .addResourceLocations("file:///D:/upload/photoProject/posts/");
+                .addResourceLocations("file:/app/upload/posts/");// 배포 경로
+                // .addResourceLocations("file:///D:/upload/photoProject/posts/"); 로컬 경로
     }
 }
