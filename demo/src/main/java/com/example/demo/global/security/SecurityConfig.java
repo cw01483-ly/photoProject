@@ -186,6 +186,9 @@ public class SecurityConfig {
                         // 정적 리소스 + 홈
                         .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
 
+                        // 게시글 이미지 파일 (정적 리소스) 배포
+                        .requestMatchers("/posts/**").permitAll()
+
                         // 인증 관련 UI
                         .requestMatchers("/ui/auth/**").permitAll()
 
