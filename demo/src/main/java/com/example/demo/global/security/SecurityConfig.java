@@ -1,6 +1,17 @@
 package com.example.demo.global.security;
 
-/* 스프링 시큐리티 전역 보안 설정 클래스*/
+/* 스프링 시큐리티 전역 보안 설정 클래스
+    - 기존:
+     1) /api/users/login : 세션(IF_REQUIRED) 체인
+     2) /api/**          : JWT(STATELESS) 체인
+     3) 그 외 화면 요청   : 세션(formLogin) 체인
+   - 변경: JWT 단일화
+     1) 단일 체인에서 UI+API 모두 처리
+     2) 세션 완전 미사용(STATELESS)
+     3) UI(/ui/**) 인증/인가 실패 시 /error/401, /error/403 으로 리다이렉트
+     4) API(/api/**) 인증/인가 실패 시 기존 JWT 핸들러(JSON 401/403) 유지
+
+*/
 
 import com.example.demo.global.security.jwt.filter.JwtAuthenticationFilter;
 import com.example.demo.global.security.jwt.handler.JwtAccessDeniedHandler;
@@ -12,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.core.annotation.Order; // 체인 우선순위 지정
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -21,10 +31,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // 필터 위치 지정
 
-import static org.springframework.security.config.Customizer.withDefaults;
+
 
 @Configuration // 설정클래스
 @EnableMethodSecurity(prePostEnabled = true) // 메서드 보안 어노테이션 활성화(@PreAuthorize)
@@ -46,83 +58,84 @@ public class SecurityConfig {
                 jwtService, jwtProperties, userDetailsService, tokenBlacklistService);
     }
 
-    /*
-        SecurityFilterChain을 3개로 분리
-            1) 세션 로그인
-
-            2) /api/** 요청
-               - JWT(HttpOnly 쿠키) 기반 인증
-               - STATELESS (세션 사용 X)
-
-            3) 그 외 화면 요청
-               - 세션(formLogin) 기반 인증
-               - 기존 브라우저 화면과 궁합 고려
-     */
-
-    /*
-        세션 로그인
-          - 현재 API체인(/api/**)은 STATELESS, 세션유지 불가하므로
-             /api/users/login 만 ★세션 허용★ 체인으로 분리
-             >>> UserService.login()에서 SecurityContextHolder에 넣은 인증이 세션에 저장, 다음요청까지 유지됨
-     */
-    // ⭐ 세션 로그인 체인 (/api/users/login) : 세션 기반 로그인 유지용
+    // UI(/ui/**) 요청에서만 401 -> /error/401 로 리다이렉트
     @Bean
-    @Order(1) // 우선순위 1 : /api/users/login 은 이 체인이 먼저 적용되도록
-    public SecurityFilterChain apiSessionLoginFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/users/login") // 이 체인은 로그인 엔드포인트에만 적용
-                .csrf(csrf -> csrf.disable()) // JSON 로그인 테스트 목적 CSRF 비활성화
-                // ↓ 세션 허용 >> "로그인 상태" 가 다음 요청까지 이어짐
-                .sessionManagement(sm
-                        -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .exceptionHandling(ex ->ex
-                        // 비로그인 -> 401
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        // 권한 부족 -> 403
-                        .accessDeniedHandler(jwtAccessDeniedHandler)
-                )
-
-                .authorizeHttpRequests(auth -> auth
-                        // 로그인 시도는 누구나 허용
-                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
-                        .anyRequest().denyAll() // 이 체인에서 로그인 외 요청은 차단
-                )
-
-                //로그인 체인에서는 formLogin/httpBasic 사용 X (JSON 로그인 API 사용)
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
-
-        return http.build();
+    public AuthenticationEntryPoint uiAuthenticationEntryPoint() {
+        return (request, response, authException) -> response.sendRedirect("/error/401");
     }
 
-
-
-
-    // ⭐ API 체인 (/api/**) : JWT 기반
+    // UI(/ui/**) 요청에서만 403 -> /error/403 로 리다이렉트
     @Bean
-    @Order(2) // 우선순위 2 : /api/**는 이 체인이 먼저 적용되도록 유도
-    public SecurityFilterChain apiSecurityFilterChain(
+    public AccessDeniedHandler uiAccessDeniedHandler() {
+        return (request, response, accessDeniedException) -> response.sendRedirect("/error/403");
+    }
+
+    /*
+        단일 JWT 체인(통합)
+        - UI + API 모두 JWT 필터 적용
+        - STATELESS 고정(세션 미사용)
+        - UI(/ui/**)만 401/403 시 에러 페이지로 리다이렉트
+        - API(/api/**)는 기존 JWT EntryPoint/DeniedHandler로 JSON 401/403 유지
+    */
+    @Bean
+    public SecurityFilterChain unifiedJwtSecurityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            AuthenticationEntryPoint uiAuthenticationEntryPoint,
+            AccessDeniedHandler uiAccessDeniedHandler
     ) throws Exception {
         http
-                .securityMatcher("/api/**") // 이 체인은 /api/** 요청에만 적용
-                .csrf(csrf -> csrf.disable()) // 개발 단계 간편 테스트 목적 CSRF 비활성화
-                .sessionManagement //  JWT 기반이므로 서버 세션을 만들지 않음(STATELESS)
-                (sm -> sm.sessionCreationPolicy
-                        (SessionCreationPolicy.STATELESS))
+                //  개발 단계 간편 테스트 목적 CSRF 비활성화
+                .csrf(csrf -> csrf.disable())
 
-                .exceptionHandling(ex ->ex
-                        // 비로그인 -> 401
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        // 권한 부족 -> 403
-                        .accessDeniedHandler(jwtAccessDeniedHandler)
+                // JWT 단일화이므로 서버 세션을 만들지 않음(STATELESS)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // UI는 리다이렉트, API는 기존 JSON 응답 유지
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            String uri = request.getRequestURI();
+                            if (uri != null && uri.startsWith("/ui/")) {
+                                uiAuthenticationEntryPoint.commence(request, response, authException);
+                                return;
+                            }
+                            jwtAuthenticationEntryPoint.commence(request, response, authException);
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            String uri = request.getRequestURI();
+                            if (uri != null && uri.startsWith("/ui/")) {
+                                uiAccessDeniedHandler.handle(request, response, accessDeniedException);
+                                return;
+                            }
+                            jwtAccessDeniedHandler.handle(request, response, accessDeniedException);
+                        })
                 )
 
-                // 요청별 인가(Authorization) 규칙 정의
+                // 요청별 인가(Authorization) 규칙 정의 (기존 API 규칙 + 기존 WEB 규칙 통합)
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입은 비 로그인 허용
+
+                        // Actuator는 필요한 것만 최소 허용
+                        .requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
+                        // 그 외 actuator는 전부 차단(정보 노출 방지)
+                        .requestMatchers("/actuator/**").denyAll()
+
+                        // 에러 페이지
+                        .requestMatchers("/error/**").permitAll()
+
+                        // 정적 리소스 + 홈
+                        .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
+
+                        // 게시글 이미지 파일 (정적 리소스) 배포
+                        .requestMatchers("/posts/**").permitAll()
+
+                        // UI 인증 관련
+                        .requestMatchers("/ui/auth/**").permitAll() // 로그인/회원가입/로그아웃 UI 등
+                        .requestMatchers("/ui/posts/**").authenticated() // 게시글 UI: 로그인 필수
+
+                        // API: 기존 규칙 유지, 회원가입은 비 로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+                        // 로그인 시도는 누구나 허용
+                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
                         // JWT 로그아웃(POST /api/auth/logout)은 비로그인 허용 (쿠키 만료)
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         // Refresh 재발급(POST /api/auth/refresh)도 비로그인 허용, Access만료 상황에서도 동작해야하므로 permitAll
@@ -137,85 +150,21 @@ public class SecurityConfig {
                         // 댓글 삭제 : 최소한 로그인 필수, DELETE /api/comments/{commentId}
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
                         // 그 외 /api/** 쓰기 작업은 인증 필요
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/**").authenticated()
+
+                        // 나머지는 허용 (기존 webSecurityFilterChain의 anyRequest().permitAll() 반영)
+                        .anyRequest().permitAll()
                 )
-                // API 체인에서 formLogin/httpBasic 비활성화
+
+                // 단일화 체인에서는 formLogin/httpBasic 비활성화
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 
-        // /api/** 체인에만 JWT 필터를 붙임
+        // 단일화 체인에 JWT 필터를 붙임
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
-
-
-    // ⭐ WEB 체인 (그 외) : 세션(formLogin) 기반
-    @Bean
-    @Order(3) // /api/** 가 아닌 모든 요청 처리
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                // 개발 단계 간편 테스트 목적 CSRF 비활성화, 추 후 ThymeLeaf 사용 시 활성화 계획
-                .csrf(csrf -> csrf.disable())
-
-                // WEB 요청에서 401/403 발생 시 Thymeleaf 에러 페이지로 보내기
-                .exceptionHandling(ex -> ex
-                        // 401 비로그인
-                        .authenticationEntryPoint
-                                ((request, response, authException) -> {
-                            response.sendRedirect("/error/401");
-                        })
-                        // 403 권한 부족
-                        .accessDeniedHandler
-                                ((request, response, authException) -> {
-                            response.sendRedirect("/error/403");
-                        })
-                )
-                // 요청별 인가(Authorization) 규칙 정의
-                .authorizeHttpRequests(auth -> auth
-                        // Actuator 는 실험에 필요한 것만 최소 허용
-                        .requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
-                        // 그 외 actuator는 전부 차단(정보 노출 방지)
-                        .requestMatchers("/actuator/**").denyAll()
-
-                        // 에러 페이지
-                        .requestMatchers("/error/**").permitAll()
-
-                        // 정적 리소스 + 홈
-                        .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
-
-                        // 게시글 이미지 파일 (정적 리소스) 배포
-                        .requestMatchers("/posts/**").permitAll()
-
-                        // 인증 관련 UI
-                        .requestMatchers("/ui/auth/**").permitAll()
-
-                        // ⭐ 게시글: 로그인 필수
-                        .requestMatchers("/ui/posts/**").authenticated()
-
-                        // 나머지는 허용
-                        .anyRequest().permitAll()
-                )
-
-                .logout(logout -> logout
-                        .logoutUrl("/ui/auth/logout")         // header의 form action과 일치
-                        .logoutSuccessUrl("/")                // 성공 후 이동
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .deleteCookies("JSESSIONID")
-                )
-
-                // 폼 로그인 (브라우저 테스트) 기본 로그인 페이지 사용
-                .formLogin(withDefaults()); // 람다 Customizer 스타일
-
-        // 화면 체인에서는 httpBasic 굳이 필요 없어서 꺼도 됨
-        http.httpBasic(basic -> basic.disable());
-        return http.build();
-    }
-
-
 
     // 비밀번호 해시용 빈 등록(UserService에서 주입받아 사용)
     @Bean
