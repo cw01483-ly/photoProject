@@ -25,14 +25,14 @@
     </section>
 
 
-    <div th:if="${param.error}" class="alert alert-error">
+    <div id="loginError" class="alert alert-error" style="display:none;">
         ❌ 아이디 또는 비밀번호가 올바르지 않습니다.
     </div>
 
     <!-- 로그인 카드 -->
     <section class="card signup-card">
 
-        <form method="post" th:action="@{/ui/auth/login}" class="form" novalidate>
+        <form id="loginForm" class="form" novalidate>
 
             <!-- 필드 그룹 -->
             <fieldset class="form-fieldset">
@@ -91,6 +91,57 @@
     </section>
 </main>
 
+<script>
+    (function () {
+      const form = document.getElementById("loginForm");
+      const errorBox = document.getElementById("loginError");
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.style.display = "block";
+      }
+
+      function hideError() {
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
+      }
+
+      // next 파라미터가 있으면 그쪽으로, 없으면 홈으로
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/";
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault(); // 폼 기본 제출 차단
+        hideError();
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        try {
+          const res = await fetch("/api/users/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "include", // Set-Cookie 반영
+            body: JSON.stringify({ username, password })
+          });
+
+          if (!res.ok) {
+            // 인증 실패 공통 처리
+            showError("아이디 또는 비밀번호가 올바르지 않습니다.");
+            return;
+          }
+
+          // 성공 → JWT 쿠키는 이미 저장됨
+          window.location.href = next;
+
+        } catch (err) {
+          showError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        }
+      });
+    })();
+</script>
 
 
 </body>
