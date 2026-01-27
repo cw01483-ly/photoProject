@@ -26,7 +26,7 @@ public class ErrorPageController {
      */
     private static final String REFRESH_URL =
             "http://127.0.0.1:8008/api/auth/refresh";
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(); // 서버 내부 호출 도구
 
     @GetMapping("/401")
     public String error401(HttpServletRequest request, HttpServletResponse response) {
@@ -41,13 +41,13 @@ public class ErrorPageController {
 
         try {
             // 1) 브라우저 쿠키 그대로 전달
-            HttpHeaders headers = new HttpHeaders();
-            String cookieHeader = request.getHeader(HttpHeaders.COOKIE);
+            HttpHeaders headers = new HttpHeaders(); // 헤더 객체 생성
+            String cookieHeader = request.getHeader(HttpHeaders.COOKIE); // 요청 Cookie 헤더 읽기
             if (cookieHeader != null && !cookieHeader.isBlank()) {
                 headers.add(HttpHeaders.COOKIE, cookieHeader);
             }
 
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers); // 헤더만 가진 요청 엔티티 생성
 
             // 2) 서버 내부에서 refresh API 호출
             ResponseEntity<Void> refreshResp =
@@ -57,6 +57,9 @@ public class ErrorPageController {
                             entity,
                             Void.class
                     );
+
+            // refresh 응답 상태코드 출력
+            System.out.println("[UI-REFRESH] refresh status: " + refreshResp.getStatusCode()); // 상태코드 로그
 
             // 3) refresh 응답의 Set-Cookie를 브라우저 응답으로 그대로 전달
             List<String> setCookies =
@@ -80,13 +83,15 @@ public class ErrorPageController {
             }
 
         } catch (Exception e) {
+            System.out.println( // 예외 로그
+                    "[UI-REFRESH] refresh call failed: " + e.getClass().getName() + " - " + e.getMessage());
             // 실패 시 그대로 401 페이지로 이동
         }
 
         return "pages/error/401";
     }
 
-    @GetMapping("/403")
+    @GetMapping("/403") // GET /error/403
     public String error403() {
         return "pages/error/403";
     }
