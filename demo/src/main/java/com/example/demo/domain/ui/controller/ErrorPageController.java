@@ -19,6 +19,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ErrorPageController {
 
+    /*
+        - 서버 내부에서 자기 자신 API를 호출할 때는
+          "공인 IP"가 아니라 반드시 localhost(127.0.0.1) 사용
+          해야 EC2 + Docker 환경에서 동작
+     */
+    private static final String REFRESH_URL =
+            "http://127.0.0.1:8008/api/auth/refresh";
     private final RestTemplate restTemplate = new RestTemplate();
 
     @GetMapping("/401")
@@ -33,14 +40,8 @@ public class ErrorPageController {
         request.getSession().setAttribute("REFRESH_ATTEMPTED", true);
 
         try {
-            // 현재 요청 기반으로 같은 호스트/포트로 API 호출 (하드코딩 방지)
-            String baseUrl = buildBaseUrl(request);
-            String refreshUrl = baseUrl + "/api/auth/refresh";
-
-            // 브라우저 쿠키를 그대로 전달
+            // 1) 브라우저 쿠키 그대로 전달
             HttpHeaders headers = new HttpHeaders();
-
-            // Cookie 헤더가 null/blank일 수 있으니 방어
             String cookieHeader = request.getHeader(HttpHeaders.COOKIE);
             if (cookieHeader != null && !cookieHeader.isBlank()) {
                 headers.add(HttpHeaders.COOKIE, cookieHeader);
@@ -48,21 +49,27 @@ public class ErrorPageController {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
+            // 2) 서버 내부에서 refresh API 호출
             ResponseEntity<Void> refreshResp =
-                    restTemplate.exchange(refreshUrl, HttpMethod.POST, entity, Void.class);
+                    restTemplate.exchange(
+                            REFRESH_URL,
+                            HttpMethod.POST,
+                            entity,
+                            Void.class
+                    );
 
-            // refresh 성공 시, API가 내려준 Set-Cookie(새 Access 쿠키 등)를 브라우저 응답에 그대로 전달
-            List<String> setCookies = refreshResp.getHeaders().get(HttpHeaders.SET_COOKIE);
+            // 3) refresh 응답의 Set-Cookie를 브라우저 응답으로 그대로 전달
+            List<String> setCookies =
+                    refreshResp.getHeaders().get(HttpHeaders.SET_COOKIE);
+
             if (setCookies != null) {
                 for (String sc : setCookies) {
                     response.addHeader(HttpHeaders.SET_COOKIE, sc);
                 }
             }
 
-            // refresh 성공, 이전 페이지 복귀
+            // 4) refresh 성공 >> 이전 페이지로 복귀
             if (refreshResp.getStatusCode().is2xxSuccessful()) {
-
-                // 성공 시 루프 방지 플래그 제거(다음 만료 상황에서도 재시도 가능)
                 request.getSession().removeAttribute("REFRESH_ATTEMPTED");
 
                 String referer = request.getHeader("Referer");
@@ -72,8 +79,8 @@ public class ErrorPageController {
                 return "redirect:/";
             }
 
-        } catch (Exception ignore) {
-            // 실패 시 아래로 떨어져 401 페이지 렌더링
+        } catch (Exception e) {
+            // 실패 시 그대로 401 페이지로 이동
         }
 
         return "pages/error/401";
@@ -82,25 +89,5 @@ public class ErrorPageController {
     @GetMapping("/403")
     public String error403() {
         return "pages/error/403";
-    }
-
-    /*
-        현재 요청을 기준으로 "같은 서버"에 API를 호출하기 위한 baseUrl 생성
-        - 예: http://15.165.160.212:8008
-        - 로컬/배포 환경 모두 대응(포트 하드코딩 제거)
-     */
-    private String buildBaseUrl(HttpServletRequest request) {
-        String scheme = request.getScheme(); // http / https
-        String host = request.getServerName(); // 도메인 or IP
-        int port = request.getServerPort(); // 8008 등
-
-        // 기본 포트(http 80 / https 443)면 포트 표기 생략
-        boolean isDefaultPort = ("http".equalsIgnoreCase(scheme) && port == 80)
-                || ("https".equalsIgnoreCase(scheme) && port == 443);
-
-        if (isDefaultPort) {
-            return scheme + "://" + host;
-        }
-        return scheme + "://" + host + ":" + port;
     }
 }
