@@ -104,35 +104,6 @@ public class UiAuthController {
             - 로그아웃의 핵심은 HttpOnly JWT 쿠키 만료
          */
 
-        try {
-            // 1) 현재 요청 기반으로 같은 호스트/포트로 API 호출
-            String baseUrl = buildBaseUrl(request);
-            String url = baseUrl + "/api/auth/logout";
-
-            // 2) 브라우저가 보낸 쿠키를 API 호출에도 그대로 전달 (Refresh 삭제/쿠키 만료에 필요)
-            HttpHeaders headers = new HttpHeaders();
-            String cookieHeader = request.getHeader(HttpHeaders.COOKIE);
-            if (cookieHeader != null && !cookieHeader.isBlank()) {
-                headers.add(HttpHeaders.COOKIE, cookieHeader);
-            }
-
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            // 3) API 로그아웃 호출
-            ResponseEntity<String> apiResp = restTemplate.postForEntity(url, entity, String.class);
-
-            // 4) API가 내려준 Set-Cookie(만료 쿠키)들을 브라우저 응답에 그대로 전달
-            List<String> setCookies = apiResp.getHeaders().get(HttpHeaders.SET_COOKIE);
-            if (setCookies != null) {
-                for (String sc : setCookies) {
-                    response.addHeader(HttpHeaders.SET_COOKIE, sc);
-                }
-            }
-
-        } catch (Exception ignore) {
-            // 로그아웃은 "최대한 진행"이 목표이므로 예외가 있어도 홈으로 보냄
-        }
-
         expireCookie(response, "ACCESS_TOKEN");// API 호출 성공/실패와 무관하게, UI에서 쿠키 만료를 항상 내려서 로그아웃 보장
         expireCookie(response, "REFRESH_TOKEN"); // (HttpOnly 쿠키는 JS로 삭제 불가하므로 서버(Set-Cookie 만료)로만 삭제 가능)
         expireCookie(response, "JSESSIONID"); // 세션 혼용 흔적(브라우저 쿠키)까지 같이 제거
