@@ -2,6 +2,7 @@ package com.example.demo.domain.ui.controller;
 
 import com.example.demo.domain.user.dto.UserSignupRequestDto;
 import com.example.demo.domain.user.service.UserService;
+import jakarta.servlet.http.Cookie; // 로그아웃 쿠키 만료
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -94,14 +95,13 @@ public class UiAuthController {
         return "pages/auth/signup";
     }
 
-    //  UI 로그아웃: 세션 무효화 + SecurityContext 정리
+    // UI 로그아웃: JWT 쿠키 만료 기반 로그아웃
     @PostMapping("/logout")
     public String logout(HttpServletRequest request, HttpServletResponse response) {
         /*
-            세션 무효화 제거
-            - request.getSession(false) / session.invalidate()
-            - SecurityContextHolder.clearContext()
-            STATELESS + JWT 단일화에서는 "쿠키 만료"가 로그아웃의 핵심
+            JWT 단일화 기준 로그아웃
+            - UI 계층에서 세션/컨텍스트 조작 없음
+            - 로그아웃의 핵심은 HttpOnly JWT 쿠키 만료
          */
 
         try {
@@ -132,6 +132,10 @@ public class UiAuthController {
         } catch (Exception ignore) {
             // 로그아웃은 "최대한 진행"이 목표이므로 예외가 있어도 홈으로 보냄
         }
+
+        expireCookie(response, "ACCESS_TOKEN");// API 호출 성공/실패와 무관하게, UI에서 쿠키 만료를 항상 내려서 로그아웃 보장
+        expireCookie(response, "REFRESH_TOKEN"); // (HttpOnly 쿠키는 JS로 삭제 불가하므로 서버(Set-Cookie 만료)로만 삭제 가능)
+        expireCookie(response, "JSESSIONID"); // 세션 혼용 흔적(브라우저 쿠키)까지 같이 제거
 
         // 로그아웃 후 홈
         return "redirect:/";
@@ -176,5 +180,13 @@ public class UiAuthController {
             return scheme + "://" + host;
         }
         return scheme + "://" + host + ":" + port;
+    }
+
+    private void expireCookie(HttpServletResponse response, String cookieName) {
+        Cookie c = new Cookie(cookieName, ""); // 값 비우기
+        c.setPath("/"); // Path가 다르면 삭제가 안 되므로 "/"로 고정
+        c.setHttpOnly(true); // 원래 HttpOnly였던 쿠키 삭제를 위해 동일 속성 유지
+        c.setMaxAge(0); // 즉시 만료
+        response.addCookie(c); // Set-Cookie로 내려가며 브라우저에서 삭제
     }
 }

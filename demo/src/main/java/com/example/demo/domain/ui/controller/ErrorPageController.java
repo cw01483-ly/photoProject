@@ -31,18 +31,23 @@ public class ErrorPageController {
     @GetMapping("/401")
     public String error401(HttpServletRequest request, HttpServletResponse response) {
 
-        // 무한 루프 방지: refresh 시도는 1회만
-        Object attempted = request.getSession(true).getAttribute("REFRESH_ATTEMPTED");
+        /*
+            UI 계층에서 세션 사용 제거
+            - getSession(true) 호출 금지
+            - JSESSIONID 재생성 방지
+            - refresh 무한 루프는 request attribute로 1회만 제어
+         */
+
+        Object attempted = request.getAttribute("REFRESH_ATTEMPTED");
         if (attempted != null) {
-            request.getSession().removeAttribute("REFRESH_ATTEMPTED");
             return "pages/error/401";
         }
-        request.getSession().setAttribute("REFRESH_ATTEMPTED", true);
+        request.setAttribute("REFRESH_ATTEMPTED", true);
 
         try {
             // 1) 브라우저 쿠키 그대로 전달
-            HttpHeaders headers = new HttpHeaders(); // 헤더 객체 생성
-            String cookieHeader = request.getHeader(HttpHeaders.COOKIE); // 요청 Cookie 헤더 읽기
+            HttpHeaders headers = new HttpHeaders();
+            String cookieHeader = request.getHeader(HttpHeaders.COOKIE); // 요청 Cookie헤더 읽기
             if (cookieHeader != null && !cookieHeader.isBlank()) {
                 headers.add(HttpHeaders.COOKIE, cookieHeader);
             }
@@ -71,10 +76,8 @@ public class ErrorPageController {
                 }
             }
 
-            // 4) refresh 성공 >> 이전 페이지로 복귀
+            // 4) refresh 성공 시 이전 페이지로 복귀
             if (refreshResp.getStatusCode().is2xxSuccessful()) {
-                request.getSession().removeAttribute("REFRESH_ATTEMPTED");
-
                 String referer = request.getHeader("Referer");
                 if (referer != null && !referer.isBlank()) {
                     return "redirect:" + referer;
@@ -83,9 +86,12 @@ public class ErrorPageController {
             }
 
         } catch (Exception e) {
-            System.out.println( // 예외 로그
-                    "[UI-REFRESH] refresh call failed: " + e.getClass().getName() + " - " + e.getMessage());
-            // 실패 시 그대로 401 페이지로 이동
+            System.out.println(
+                    "[UI-REFRESH] refresh call failed: "
+                            + e.getClass().getName()
+                            + " - "
+                            + e.getMessage()
+            );
         }
 
         return "pages/error/401";
