@@ -78,6 +78,18 @@ public class ErrorPageController {
 
             // 4) refresh 성공 시 이전 페이지로 복귀
             if (refreshResp.getStatusCode().is2xxSuccessful()) {
+
+                //  redirect 파라미터(상대경로)를 최우선 사용
+                String redirect = request.getParameter("redirect"); // 예: /ui/posts/7
+                if (redirect != null && !redirect.isBlank()) {
+
+                    // Open Redirect 방지 - 상대경로만 허용 ("/"로 시작하는 경로만)
+                    if (redirect.startsWith("/")) {
+                        return "redirect:" + redirect;
+                    }
+                }
+
+                // redirect 파라미터가 없으면 referer 사용 시도
                 String referer = request.getHeader("Referer");
                 if (referer != null && !referer.isBlank()) {
                     return "redirect:" + referer;
