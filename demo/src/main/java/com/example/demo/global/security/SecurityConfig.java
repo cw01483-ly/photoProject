@@ -36,7 +36,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // 필터 위치 지정
 
-
+import java.net.URLEncoder; // redirect 파라미터 안전 인코딩
+import java.nio.charset.StandardCharsets; // UTF-8 인코딩
 
 @Configuration // 설정클래스
 @EnableMethodSecurity(prePostEnabled = true) // 메서드 보안 어노테이션 활성화(@PreAuthorize)
@@ -61,7 +62,18 @@ public class SecurityConfig {
     // UI(/ui/**) 요청에서만 401 -> /error/401 로 리다이렉트
     @Bean
     public AuthenticationEntryPoint uiAuthenticationEntryPoint() {
-        return (request, response, authException) -> response.sendRedirect("/error/401");
+       /* 원래 요청 URL(경로+쿼리)을 redirect 파라미터로 함께 넘긴다.
+        이유: /error/401의 Referer가 "/"로 고정되는 케이스가 있어, refresh 성공 후 원래 페이지 복귀가 불가능했음.
+        예: /ui/posts/7?x=1  ->  /error/401?redirect=/ui/posts/7?x=1*/
+        return (request, response, authException) -> {
+            String uri = request.getRequestURI();
+            String query = request.getQueryString();
+
+            String redirect = (query == null) ? uri : (uri + "?" + query);
+            String encodedRedirect = URLEncoder.encode(redirect, StandardCharsets.UTF_8);
+
+            response.sendRedirect("/error/401?redirect=" + encodedRedirect);
+        };
     }
 
     // UI(/ui/**) 요청에서만 403 -> /error/403 로 리다이렉트
